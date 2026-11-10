@@ -13,6 +13,7 @@ const publicDir = fileURLToPath(new URL('../../public/', import.meta.url));
 const pages = {
   '/login': ['login.html', 'text/html; charset=utf-8'],
   '/events': ['events.html', 'text/html; charset=utf-8'],
+  '/events-client.mjs': ['events-client.mjs', 'text/javascript; charset=utf-8'],
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
 };
@@ -54,7 +55,7 @@ export function createApp(db) {
         if (!user) return redirect(res, '/login');
         return await sendPage(res, '/events');
       }
-      if (req.method === 'GET' && (route === '/app.js' || route === '/styles.css')) return await sendPage(res, route);
+      if (req.method === 'GET' && (route === '/app.js' || route === '/events-client.mjs' || route === '/styles.css')) return await sendPage(res, route);
       if (req.method === 'POST' && route === '/api/login') {
         let payload;
         try { payload = await bodyAsJson(req); } catch { return json(res, 400, { error: 'Invalid JSON' }); }

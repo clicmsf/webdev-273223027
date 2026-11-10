@@ -1,4 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Upcoming events | Club Events</title><link rel="stylesheet" href="/styles.css"></head>
 <body><main class="shell"><nav class="topbar"><div><span class="eyebrow">INFORMATICS CLUB</span><h1>Upcoming events</h1></div><button id="logout" class="secondary" type="button">Sign out</button></nav>
-<p class="subtitle">Find student activities and available places.</p><p id="message" class="message" role="status">Loading events...</p><section id="events" class="grid" aria-label="Upcoming club events"></section><footer>Events are loaded live from SQLite.</footer></main><script src="/app.js" defer></script></body></html>
+<p class="subtitle">Meet your club. Find an event and reserve your place.</p>
+<p id="message" class="message" role="status">Loading events...</p>
+<p id="error" class="error" role="alert" hidden></p><button id="retry" class="secondary" type="button">Refresh events</button>
+<section id="events" class="grid" aria-label="Upcoming club events" aria-busy="true"></section>
+<section id="poster-panel" class="panel" hidden><h2>Read an event poster</h2>
+<p>Choose a poster to draft event details. With a configured model key, the image is sent to Google Gemini. Review every field. This preview does not create an event.</p>
+<form id="poster-form"><label for="poster-image">Poster image (PNG, JPEG or WebP, up to 2 MB)</label><input id="poster-image" type="file" accept="image/png,image/jpeg,image/webp"><button>Suggest event details</button></form>
+<p id="poster-message" role="status"></p><label for="draft-title">Title</label><input id="draft-title" maxlength="160"><label for="draft-date">Date (UTC)</label><input id="draft-date" type="text" placeholder="YYYY-MM-DDTHH:mm:ss.sssZ"><label for="draft-location">Location</label><input id="draft-location" list="venues"><datalist id="venues"><option value="TU Sofia, Building 1"><option value="TU Sofia, Library"><option value="Online"></datalist></section>
+<footer>Club Events ? Your reservations stay with your account.</footer></main><script src="/events-client.mjs" type="module"></script></body></html>

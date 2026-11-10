@@ -1,0 +1,52 @@
+// Optional browser checks: node --test test/ui.test.browser.mjs (requires Playwright).
+// Uses a new temporary browser profile; never connects to the user's live Chrome.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+import { mkdirSync } from 'node:fs';
+import { openDatabase, upsertDemoUser } from '../src/data/db.mjs';
+import { createApp } from '../src/routes/http.mjs';
+
+test('AC-15 AC-2 AC-4 AC-7 browser loading, success, empty, offline retry and manual draft',async t=>{
+ delete process.env.GEMINI_API_KEY;
+ const db=openDatabase(':memory:');upsertDemoUser(db,'test-only-password');
+ const server=createApp(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ const context=await browser.newContext({viewport:{width:390,height:844}});const page=await context.newPage();
+ t.after(async()=>{await browser.close();await new Promise(r=>server.close(r));db.close();});
+ const base=`http://127.0.0.1:${server.address().port}`;
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(base+'/login');await page.locator('#password').fill('test-only-password');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.waitForURL('**/events');
+ await page.getByRole('button',{name:'Reserve a place: Web Development Workshop',exact:true}).waitFor();
+ assert.equal(await page.locator('.event').count(),3);
+ await page.getByRole('button',{name:'Reserve a place: Web Development Workshop',exact:true}).click();
+ await page.getByText('Your place is reserved',{exact:true}).waitFor();
+ assert.equal(db.prepare('SELECT count(*) AS n FROM registrations').get().n,1);
+ mkdirSync('.local',{recursive:true});await page.screenshot({path:'.local/exercise3-reservation-mobile.png',fullPage:true});
+ await page.getByRole('button',{name:'Cancel reservation: Web Development Workshop',exact:true}).click();
+ await page.getByText('Reservation cancelled. Your place is available again.',{exact:true}).waitFor();
+ assert.equal(db.prepare('SELECT count(*) AS n FROM registrations').get().n,0);
+ let release;const gate=new Promise(r=>release=r);
+ await page.route('**/api/events',async route=>{await gate;await route.continue();});
+ await page.getByRole('button',{name:'Refresh events',exact:true}).click();
+ await page.getByText('Loading events...',{exact:true}).waitFor();assert.equal(await page.locator('#events').getAttribute('aria-busy'),'true');
+ release();await page.waitForFunction(()=>document.querySelector('#events').getAttribute('aria-busy')==='false');await page.unrouteAll({behavior:'wait'});
+ db.prepare('DELETE FROM events').run();
+ await page.getByRole('button',{name:'Refresh events',exact:true}).click();
+ await page.getByText('No upcoming events yet. Check back soon or refresh to look for new activities.',{exact:true}).waitFor();
+ assert.equal(await page.locator('.event').count(),0);
+ await context.setOffline(true);await page.getByRole('button',{name:'Refresh events',exact:true}).click();
+ await page.getByText('Could not reach the server. Check your connection and try again.',{exact:true}).waitFor();
+ await context.setOffline(false);await page.getByRole('button',{name:'Try again',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#events').getAttribute('aria-busy')==='false');
+ db.prepare("UPDATE users SET role='organizer' WHERE id=1").run();
+ await page.getByRole('button',{name:'Refresh events',exact:true}).click();await page.locator('#poster-panel').waitFor({state:'visible'});
+ await page.getByRole('button',{name:'Suggest event details',exact:true}).click();
+ await page.getByText('Automatic suggestions unavailable; enter event details manually',{exact:true}).waitFor();
+ await page.locator('#draft-title').fill('Manual event');assert.equal(await page.locator('#draft-title').inputValue(),'Manual event');
+ assert.equal(db.prepare('SELECT count(*) AS n FROM events').get().n,0);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ mkdirSync('.local',{recursive:true});await page.screenshot({path:'.local/exercise3-mobile.png',fullPage:true});
+ assert.deepEqual(errors,[]);
+});
