@@ -50,10 +50,15 @@ Slice 1 requests travel from `src/routes/http.mjs` to `src/services/auth.mjs` or
 - [AC-2] A member reserving a free place sees a confirmation, and a registration row appears in the database.
 - [AC-3] A member trying to reserve a full event receives HTTP 409 and sees "This event is full"; no new registration appears.
 - [AC-4] A member cancelling their own reservation sees the place become available again, while another member's reservation remains unchanged.
-- [AC-5] An organizer creating a valid event sees it on the events list; an ordinary member attempting the same operation receives HTTP 403.
-- [AC-6] A user who links a verified Google identity to their existing local account signs in to the same user id and no duplicate account is created.
 - [AC-7] An organizer using poster suggestions with no model key sees "Automatic suggestions unavailable; enter event details manually" and can still fill in the form themselves.
 - [AC-8] The MCP tool `register_for_event` uses the same capacity rule as the HTTP API and refuses a full event without inserting a registration.
+
+### Slice 2: event reservations
+- [AC-12] A duplicate reservation returns 409 without creating a second row.
+- [AC-13] Anonymous reservation and cancellation return 401; cancellation of another member's reservation returns 403 without changing it.
+- [AC-14] Missing events/registrations return 404; invalid event ids return 422; past events reject reservations with 409.
+- [AC-15] The reservation screen shows loading, actionable empty, success, and readable error/retry states.
+- [AC-16] Model suggestions use valid title/date/location only; invalid output, unavailable provider or timeout yields manual entry, and saves nothing.
 
 ### Slice 1: sign-in and the upcoming events list
 - [AC-9] A visitor opening `/events` without signing in is redirected with HTTP 302 to `/login`; `/api/events` returns HTTP 401 without a session.
@@ -74,3 +79,9 @@ Slice 1 requests travel from `src/routes/http.mjs` to `src/services/auth.mjs` or
 - Gap in the initial requirement: it specified three upcoming rows but did not state which order to show them in.
 - Changed in this spec: AC-10 now explicitly requires date ordering. `src/data/db.mjs` sorts by event date, and the AC-10 test checks that ordering.
 - The student must still open the actual Codespace browser and perform the manual clicks before requesting the teaching assistant's approval.
+
+## Deferred roadmap (outside this exercise acceptance scope)
+- [AC-5] An organizer creating a valid event sees it on the events list; an ordinary member attempting the same operation receives HTTP 403.
+- [AC-6] A user who links a verified Google identity to their existing local account signs in to the same user id and no duplicate account is created.
+
+AC-5 organizer event creation and AC-6 Google linking remain unimplemented; their original requirements are retained here, not presented as passing criteria.
