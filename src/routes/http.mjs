@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { authenticate, clearSessionCookie, currentUser, endSession, sessionCookie } from '../services/auth.mjs';
 import { listUpcomingEvents } from '../services/events.mjs';
 
+import { reservePlace, cancelReservation, myRegistrations, RegistrationError } from '../services/registrations.mjs';
+
 const publicDir = fileURLToPath(new URL('../../public/', import.meta.url));
 const pages = {
   '/login': ['login.html', 'text/html; charset=utf-8'],
@@ -66,12 +68,25 @@ export function createApp(db) {
         if (!user) return json(res, 401, { error: 'Sign in first' });
         return json(res, 200, { events: listUpcomingEvents(db) });
       }
+      if (route === '/api/registrations' && ['GET','POST'].includes(req.method)) {
+        if (!user) return json(res, 401, { error: 'Unauthenticated', message: 'Sign in first' });
+        if (req.method === 'GET') return json(res, 200, { registrations: myRegistrations(db,user.id) });
+        let payload;
+        try { payload=await bodyAsJson(req); } catch { return json(res,400,{error:'InvalidJson',message:'Enter valid JSON'}); }
+        return json(res,201,{registration:reservePlace(db,user.id,payload?.eventId)});
+      }
+      if (req.method === 'DELETE' && /^\/api\/registrations\/[^/]+$/.test(route)) {
+        if (!user) return json(res,401,{error:'Unauthenticated',message:'Sign in first'});
+        cancelReservation(db,user.id,Number(route.split('/').pop()));
+        res.writeHead(204,{'Cache-Control':'no-store'}); return res.end();
+      }
       if (req.method === 'GET' && route === '/api/me') {
         if (!user) return json(res, 401, { error: 'Sign in first' });
         return json(res, 200, { user });
       }
       return json(res, 404, { error: 'Not found' });
     } catch (error) {
+      if (error instanceof RegistrationError) return json(res,error.status,{error:error.name,message:error.message});
       console.error('Request failed:', error.message);
       if (!res.headersSent) json(res, 500, { error: 'Internal server error' });
       else res.end();
