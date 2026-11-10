@@ -67,7 +67,19 @@ test('AC-11 removing a SQLite row removes exactly that event after reload', asyn
   }
 });
 
-test('sign out deletes the session', async () => {
+test('AC-17 incorrect password returns 401 without creating a session', async () => {
+  const before = db.prepare('SELECT count(*) AS n FROM sessions').get().n;
+  const response = await fetch(`${base}/api/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: DEMO_EMAIL, password: 'incorrect-password' })
+  });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).error, 'Invalid email or password');
+  assert.equal(response.headers.get('set-cookie'), null);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM sessions').get().n, before);
+});
+
+test('AC-18 sign out deletes the session', async () => {
   const cookie = await login();
   const response = await fetch(`${base}/api/logout`, { method: 'POST', headers: { Cookie: cookie } });
   assert.equal(response.status, 200);

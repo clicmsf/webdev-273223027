@@ -88,3 +88,41 @@ This is Codex's review, not a claim of student review or hand-written student te
   found in README/package metadata and moved optional browser verification out of
   Node's default test-directory discovery so clean CI does not require Playwright.
 - Final local tree committed. Push/remote CI and student review remain outstanding.
+
+
+## 2026-11-10 — Exercise 1–2 repair and verification
+- Goal: investigate the reported missing four ticks, repair Exercises 1 and 2,
+  verify them and commit/push; the user explicitly authorized autonomous fixes
+  and pushing and requested GitHub sign-in.
+- Initial evidence: remote main 845c7b8 already has four successful GitHub checks
+  (test, coverage, mcp, spec). Exercise 1 self-check passed 12/12 and Exercise 2
+  passed 32/32 before this repair. CI is distinct from course acceptance.
+- Found: malformed MCP arguments could terminate the process; schema-invalid
+  registration ids reached the tool instead of producing a protocol error.
+  The README transcript omitted a successful lecture call, its lecture range
+  was stale, and the description experiment was only simulated.
+- Changed: validate request/argument shapes and registration ids before tool
+  execution; add a real-process regression test proving error replies and
+  recovery; capture a complete automated transcript including successful calls,
+  notification silence, tool failure, protocol errors and recovery.
+- Exercise 2: keep AC-5/AC-6 in the deferred roadmap; add explicit
+  incorrect-password and sign-out requirements for existing behavior so eight
+  active whole-project criteria precede the three slice 1 criteria;
+  replace obsolete ZIP instructions with checkout verification steps; document
+  evidence and human review gaps. Use the silent MCP command in AGENTS.md.
+- Checkpoints: course requirements, remote CI status, baseline checks, input
+  regression test, full test suite and both existing coverage thresholds.
+- Changed by hand by student: none in this session. Real-agent selection and
+  description experiment, original student authorship, missing historical CLI
+  usage and teaching-assistant acceptance cannot be supplied by automation.
+- No dependencies, migrations, CI definitions, coverage thresholds, tool names,
+  authentication rules or real provider calls changed.
+
+### Repair validation outcome
+- Test suite: 18/18. Exercise 1: 12/12. Exercise 2: 32/32.
+  Exercise 3 regression check: 18/18.
+- Service coverage: 100% lines/functions/branches. Overall source lines: 94.66%.
+- Host verification used Node 24.22.1 and a workspace TMPDIR because the default
+  /tmp was unavailable for one coverage attempt; the workspace rerun passed.
+- GitHub connected for this request; publication uses the connected account's
+  GitHub commit/tree/ref API with an expected-head lease and no force update.

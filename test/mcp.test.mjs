@@ -1,12 +1,46 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDatabase, upsertDemoUser } from '../src/data/db.mjs';
 import { authenticate } from '../src/services/auth.mjs';
+
+test('Exercise 1: malformed messages return protocol errors and the same server keeps running', () => {
+ const request=(id,method,params)=>({jsonrpc:'2.0',id,method,params});
+ const messages=[
+  '{broken', null, [], {jsonrpc:'2.0',id:[],method:'tools/list'},
+  request(1,'tools/call',null), request(2,'tools/call',[]),
+  request(3,'tools/call',{name:'find_lecture',arguments:null}),
+  request(4,'tools/call',{name:'find_lecture',arguments:[]}),
+  request(5,'tools/call',{name:'find_lecture',arguments:{number:'5'}}),
+  request(6,'tools/call',{name:'register_for_event',arguments:{eventId:'1'}}),
+  request(7,'tools/call',{name:'register_for_event',arguments:{}}),
+  request(8,'tools/call',{name:'register_for_event',arguments:{eventId:0}}),
+  {jsonrpc:'2.0',method:'initialize',params:{}},
+  {jsonrpc:'2.0',method:'notifications/initialized'},
+  request(9,'tools/call',{name:'find_lecture',arguments:{number:99}}),
+  request(10,'no_such_method',{}),
+  request(11,'tools/call',{name:'find_lecture',arguments:{number:5}})
+ ];
+ const result=spawnSync(process.execPath,['mcp-server/server.js'],{
+  env:{...process.env,DB_PATH:':memory:',CLUB_SESSION_TOKEN:''},encoding:'utf8',timeout:5000,
+  input:messages.map(m=>typeof m==='string'?m:JSON.stringify(m)).join('\n')+'\n'
+ });
+ assert.equal(result.error,undefined);
+ assert.equal(result.status,0,result.stderr);
+ const replies=result.stdout.trim().split('\n').map(line=>JSON.parse(line));
+ assert.equal(replies.length,15,'notifications must produce no output');
+ assert.deepEqual(replies.slice(0,4).map(r=>[r.id,r.error.code]),[
+  [null,-32700],[null,-32600],[null,-32600],[null,-32600]
+ ]);
+ for(let id=1;id<=8;id++) assert.equal(replies.find(r=>r.id===id).error.code,-32602);
+ assert.equal(replies.find(r=>r.id===9).result.isError,true);
+ assert.equal(replies.find(r=>r.id===10).error.code,-32601);
+ assert.match(replies.find(r=>r.id===11).result.content[0].text,/Lecture 5:/);
+});
 
 test('AC-8 MCP uses shared capacity rule and validates session identity',async t=>{
  const folder=mkdtempSync(join(tmpdir(),'club-mcp-')); const filename=join(folder,'test.db');

@@ -96,6 +96,16 @@ function topicsOf(lecture) {
 
 // Handle incoming messages
 function handle(msg) {
+  const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!isObject(msg) || msg.jsonrpc !== '2.0' || typeof msg.method !== 'string' ||
+      (msg.id !== undefined && msg.id !== null && typeof msg.id !== 'string' && typeof msg.id !== 'number')) {
+    return protocolError(null, -32600, 'Invalid request');
+  }
+  // A notification never receives a response, including initialize without an id.
+  if (msg.id === undefined) return null;
+  if (msg.params !== undefined && !isObject(msg.params)) {
+    return protocolError(msg.id, -32602, 'Params must be an object');
+  }
 
   // Initialize handshake
   if (msg.method === 'initialize') {
@@ -139,11 +149,17 @@ function handle(msg) {
   // Call tools
   if (msg.method === 'tools/call') {
     const name = msg.params?.name;
-    const args = msg.params?.arguments || {};
+    const args = msg.params?.arguments === undefined ? {} : msg.params.arguments;
+    if (typeof name !== 'string' || !isObject(args)) {
+      return protocolError(msg.id, -32602, 'Tool name and object arguments are required');
+    }
 
     if (['upcoming_events','my_registrations','register_for_event'].includes(name)) {
       const expected=name==='register_for_event'?['eventId']:[];
       if (Object.keys(args).some(key=>!expected.includes(key))) return protocolError(msg.id,-32602,'Unexpected argument');
+      if (name === 'register_for_event' && (!Number.isInteger(args.eventId) || args.eventId < 1)) {
+        return protocolError(msg.id, -32602, 'Event id must be a positive integer');
+      }
       const user=currentUser(db,{headers:{cookie:'club_session='+(process.env.CLUB_SESSION_TOKEN || '')}});
       if (!user) return textResult(msg.id,JSON.stringify({error:'Unauthenticated',status:401,message:'Sign in first'}),true);
       try {

@@ -13,7 +13,7 @@ Club Events helps students view upcoming student-club activities and, later, reg
 - Browser verification: `node --test browser-tests/ui.test.browser.mjs` (optional Playwright installation required; separate temporary profile)
 - Self-check: `node checks/ex3.mjs`
 - Coverage: the existing CI commands enforce 100% service lines/functions/branches and 80% overall lines; no threshold changes.
-- MCP server: `npm run mcp` (retains lecture tools and adds three project tools; project identity comes from CLUB_SESSION_TOKEN, validated through the session service)
+- MCP server: `npm run --silent mcp` (retains lecture tools and adds three project tools; project identity comes from CLUB_SESSION_TOKEN, validated through the session service)
 
 ## Conventions
 - HTTP routing lives in `src/routes/`, business logic in `src/services/`, and database access with SQL only in `src/data/`.

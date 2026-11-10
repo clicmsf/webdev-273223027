@@ -55,6 +55,9 @@ Plain HTML, CSS and client-side JavaScript. Planned screens: local/Google sign-i
 - [AC-7] An organizer using poster suggestions with no model key sees "Automatic suggestions unavailable; enter event details manually" and can still fill in the form themselves.
 - [AC-8] The MCP tool `register_for_event` uses the same capacity rule as the HTTP API and refuses a full event without inserting a registration.
 
+- [AC-17] A visitor submitting an incorrect password receives HTTP 401 with "Invalid email or password", no session cookie and no new session row.
+- [AC-18] A signed-in member signing out returns to sign-in; the old session no longer grants access to the events API (HTTP 401).
+
 ### Slice 2: event reservations
 - [AC-12] A duplicate reservation returns 409 without creating a second row.
 - [AC-13] Anonymous reservation and cancellation return 401; cancellation of another member's reservation returns 403 without changing it.
@@ -84,6 +87,8 @@ Plain HTML, CSS and client-side JavaScript. Planned screens: local/Google sign-i
 | AC-14 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`: missing/invalid/past |
 | AC-15 | `browser-tests/ui.test.browser.mjs`: loading, empty, success, error and retry |
 | AC-16 | `test/poster.test.mjs`: valid/nonsense/no-answer/timeout/fake HTTP provider |
+| AC-17 | `test/slice1.test.mjs`: incorrect password refuses a session |
+| AC-18 | `test/slice1.test.mjs`: sign-out revokes the session |
 
 ## Spec vs result
 - Slice 1 and slice 2 implemented criteria pass local automated verification; see `docs/exercise-3-evidence.md` for commands and limitations.
