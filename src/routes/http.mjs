@@ -7,6 +7,8 @@ import { listUpcomingEvents } from '../services/events.mjs';
 
 import { reservePlace, cancelReservation, myRegistrations, RegistrationError } from '../services/registrations.mjs';
 
+import { suggestPoster } from '../services/poster.mjs';
+
 const publicDir = fileURLToPath(new URL('../../public/', import.meta.url));
 const pages = {
   '/login': ['login.html', 'text/html; charset=utf-8'],
@@ -23,11 +25,11 @@ function redirect(res, destination) {
   res.writeHead(302, { Location: destination, 'Cache-Control': 'no-store' });
   res.end();
 }
-async function bodyAsJson(req) {
+async function bodyAsJson(req, limit=8192) {
   let data = '';
   for await (const chunk of req) {
     data += chunk;
-    if (data.length > 8192) throw new Error('Request too large');
+    if (data.length > limit) throw new Error('Request too large');
   }
   return JSON.parse(data || '{}');
 }
@@ -68,7 +70,13 @@ export function createApp(db) {
         if (!user) return json(res, 401, { error: 'Sign in first' });
         return json(res, 200, { events: listUpcomingEvents(db) });
       }
-      if (route === '/api/registrations' && ['GET','POST'].includes(req.method)) {
+      if (req.method === 'POST' && route === '/api/poster-suggestions') {
+        if (!user) return json(res,401,{error:'Unauthenticated',message:'Sign in first'});
+        let payload;
+        try { payload=await bodyAsJson(req,2900000); } catch { return json(res,400,{error:'InvalidInput',message:'Choose a poster image under 2 MB'}); }
+        return json(res,200,await suggestPoster(user,payload || {}));
+      }
+      if (route === '/api/registrations'  && ['GET','POST'].includes(req.method)) {
         if (!user) return json(res, 401, { error: 'Unauthenticated', message: 'Sign in first' });
         if (req.method === 'GET') return json(res, 200, { registrations: myRegistrations(db,user.id) });
         let payload;
