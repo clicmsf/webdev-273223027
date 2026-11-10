@@ -69,3 +69,7 @@ When an exercise is done, commit and push, so your work is on GitHub and CI has 
 ## Save your free quota
 
 Stop the codespace when you finish (**Code → Codespaces → … → Stop codespace**) and delete codespaces you no longer need.
+
+## Exercise 3 local implementation
+
+See [implementation and verification](docs/exercise-3-evidence.md) for run commands, checks and the remaining student-review steps.

@@ -103,7 +103,7 @@ function handle(msg) {
       jsonrpc: '2.0',
       id: msg.id,
       result: {
-        protocolVersion: msg.params.protocolVersion,
+        protocolVersion: msg.params?.protocolVersion || '2024-11-05',
         capabilities: {
           tools: {}
         },

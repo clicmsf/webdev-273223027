@@ -59,7 +59,7 @@ export function createApp(db) {
       if (req.method === 'POST' && route === '/api/login') {
         let payload;
         try { payload = await bodyAsJson(req); } catch { return json(res, 400, { error: 'Invalid JSON' }); }
-        const signedIn = authenticate(db, payload.email, payload.password);
+        const signedIn = authenticate(db, payload?.email, payload?.password);
         if (!signedIn) return json(res, 401, { error: 'Invalid email or password' });
         return json(res, 200, { user: signedIn.user }, { 'Set-Cookie': sessionCookie(req, signedIn.token) });
       }
@@ -77,7 +77,7 @@ export function createApp(db) {
         try { payload=await bodyAsJson(req,2900000); } catch { return json(res,400,{error:'InvalidInput',message:'Choose a poster image under 2 MB'}); }
         return json(res,200,await suggestPoster(user,payload || {}));
       }
-      if (route === '/api/registrations'  && ['GET','POST'].includes(req.method)) {
+      if (route === '/api/registrations' && ['GET','POST'].includes(req.method)) {
         if (!user) return json(res, 401, { error: 'Unauthenticated', message: 'Sign in first' });
         if (req.method === 'GET') return json(res, 200, { registrations: myRegistrations(db,user.id) });
         let payload;

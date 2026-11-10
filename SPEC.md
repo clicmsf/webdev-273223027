@@ -22,10 +22,10 @@ Club events.
 - No real model or OAuth credentials are committed to Git.
 
 ## The model feature
-- Model: Gemini 2.5 Flash (planned for Exercise 3+), isolated in `src/services/poster.mjs` when implemented.
+- Model: Gemini 2.5 Flash, implemented in `src/services/poster.mjs` with an injected client for tests.
 - Input: an organizer-uploaded event-poster image, without any member account data.
 - Output: a proposed event title, date and location that an organizer reviews before saving.
-- When it fails: on timeout, missing `GEMINI_API_KEY`, 429, or invalid output, show an empty manual-entry form and the message "Automatic suggestions unavailable; enter event details manually." No data is saved automatically. This feature is not built in slice 1.
+- When it fails: on timeout, missing `GEMINI_API_KEY`, 429, or invalid output, show an empty manual-entry form and the message "Automatic suggestions unavailable; enter event details manually." No data is saved automatically. The organizer preview is implemented in slice 2; no event is saved automatically.
 
 ## Auth
 - Local: email and password, salted scrypt hash, and a secure random session in an HttpOnly cookie.
@@ -40,10 +40,12 @@ Club events.
 | `register_for_event` | Reserves a place when capacity permits and rejects fully booked events | the authenticated account owner |
 
 ## UI
-Plain HTML, CSS and client-side JavaScript. Planned screens: local/Google sign-in, upcoming event list, event detail and registration screen, organizer event management. Each screen needs loading, empty, error and success states. Only sign-in and the database-backed event list are implemented in slice 1. See `docs/UI.md` for the future checklist.
+Plain HTML, CSS and client-side JavaScript. Planned screens: local/Google sign-in, upcoming event list, event detail and registration screen, organizer event management. Each screen needs loading, empty, error and success states. Slice 2 adds reservation/cancellation and an organizer-only poster draft panel. See `docs/UI.md` for the future checklist.
 
 ## Architecture
-Slice 1 requests travel from `src/routes/http.mjs` to `src/services/auth.mjs` or `src/services/events.mjs`, then to SQL in `src/data/db.mjs`. Future MCP tools must call the same services. The Google provider and poster model are designed but intentionally not implemented in Exercise 2.
+- Server: `src/routes/http.mjs` authenticates a request and maps service results/errors to HTTP. `src/services/registrations.mjs` owns capacity, duplicate and ownership rules; `src/data/db.mjs` owns SQL and transactions.
+- Browser: `public/events.html` hosts the view; `public/events-client.mjs` owns screen state, REST requests and rendering. MCP calls the same services with a validated session identity.
+- The complete agent-written request trace, deliberate layering mismatch and student-review requirements are in `docs/feature-3.md`. This is a review draft, not a claim of student authorship.
 
 ## Acceptance criteria
 - [AC-1] A signed-in member opening the events list sees only future events sorted by date, with available places displayed.
@@ -68,17 +70,26 @@ Slice 1 requests travel from `src/routes/http.mjs` to `src/services/auth.mjs` or
 ## Traceability
 | Criterion | Test |
 | --- | --- |
-| AC-1 | Planned full-feature test in Exercise 3 |
-| AC-2 to AC-8 | Planned full-feature tests in Exercises 3-5 |
+| AC-1 | `test/reservations-api.test.mjs`: real HTTP lifecycle; `test/slice1.test.mjs`: sorted future events |
+| AC-2 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`, `browser-tests/ui.test.browser.mjs`: persistence and confirmation |
+| AC-3 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`: full event; browser test: readable 409 message |
+| AC-4 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`, `browser-tests/ui.test.browser.mjs`: cancellation |
+| AC-7 | `test/poster.test.mjs`, `browser-tests/ui.test.browser.mjs`: no-key manual entry |
+| AC-8 | `test/mcp.test.mjs`: real stdio calls, same capacity rule |
 | AC-9 | `test/slice1.test.mjs`: redirect and unauthorized API |
 | AC-10 | `test/slice1.test.mjs`: seeded sign-in and sorted list |
 | AC-11 | `test/slice1.test.mjs`: database deletion reflected in API |
+| AC-12 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`: duplicates |
+| AC-13 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`: 401 versus 403 |
+| AC-14 | `test/registrations.test.mjs`, `test/reservations-api.test.mjs`: missing/invalid/past |
+| AC-15 | `browser-tests/ui.test.browser.mjs`: loading, empty, success, error and retry |
+| AC-16 | `test/poster.test.mjs`: valid/nonsense/no-answer/timeout/fake HTTP provider |
 
 ## Spec vs result
-- Passed in local automated verification: AC-9, AC-10 and AC-11. The list is loaded from a real SQLite table and a session is required.
+- Slice 1 and slice 2 implemented criteria pass local automated verification; see `docs/exercise-3-evidence.md` for commands and limitations.
 - Gap in the initial requirement: it specified three upcoming rows but did not state which order to show them in.
 - Changed in this spec: AC-10 now explicitly requires date ordering. `src/data/db.mjs` sorts by event date, and the AC-10 test checks that ordering.
-- The student must still open the actual Codespace browser and perform the manual clicks before requesting the teaching assistant's approval.
+- This session used a local Windows checkout with Codex and isolated Chrome, rather than Gemini in Codespaces. Student plan review, architecture authorship and teaching-assistant acceptance remain human tasks.
 
 ## Deferred roadmap (outside this exercise acceptance scope)
 - [AC-5] An organizer creating a valid event sees it on the events list; an ordinary member attempting the same operation receives HTTP 403.

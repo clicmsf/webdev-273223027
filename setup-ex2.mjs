@@ -15,7 +15,7 @@ pkg.scripts.mcp ??= 'node mcp-server/server.js';
 writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n');
 const ignorePath = '.gitignore';
 const ignore = existsSync(ignorePath) ? readFileSync(ignorePath, 'utf8') : '';
-const additions = ['node_modules/', 'data/', '.env'];
+const additions = ['node_modules/', '/data/', '.env'];
 const missing = additions.filter((entry) => !ignore.split(/\r?\n/).includes(entry));
 if (missing.length) writeFileSync(ignorePath, ignore.trimEnd() + '\n' + missing.join('\n') + '\n');
 console.log('Exercise 2 files and npm scripts are ready. Existing MCP server preserved.');

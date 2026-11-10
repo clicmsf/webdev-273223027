@@ -3,7 +3,7 @@
 // they cannot tell you the work is good. Only you and the defence can do that.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 
 export const results = [];
 export const check = (name, ok, detail = '') => results.push({ name, ok: Boolean(ok), detail });
@@ -132,6 +132,12 @@ export const acceptanceIds = (spec) => {
 /** run a command and report what happened, instead of throwing */
 export const run = (cmd, args, { timeout = 180_000, cwd = '.' } = {}) => {
   try {
+    // Windows npm is a command shim. Invoke its JS entry point with Node rather
+    // than enabling a shell (which would reinterpret arbitrary command arguments).
+    if (process.platform === 'win32' && cmd === 'npm') {
+      args = [join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'), ...args];
+      cmd = process.execPath;
+    }
     const out = execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', timeout, cwd, shell: false });
     return { code: 0, out };
   } catch (error) {

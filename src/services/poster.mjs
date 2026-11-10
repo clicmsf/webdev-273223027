@@ -16,14 +16,17 @@ export async function suggestPoster(user,{image,mimeType}={}, {client=geminiClie
  const fallback=()=>({suggestion:null,message:MANUAL_MESSAGE});
  if (!key) return fallback();
  if (!['image/png','image/jpeg','image/webp'].includes(mimeType) || typeof image!=='string' || !image.length || image.length>2800000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(image)) return fallback();
- const controller=new AbortController(); let timer;
+ const controller=new AbortController(); let timer; let output;
  try {
-  const output=await Promise.race([
+  output=await Promise.race([
    client({image,mimeType,key,signal:controller.signal}),
    new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Timeout'));},timeoutMs);})
   ]);
+ } catch {
+  return fallback();
+ } finally {
+  clearTimeout(timer);
+ }
   if (!output || typeof output.title!=='string' || !output.title.trim() || output.title.length>160 || /[<>\x00-\x1f]/.test(output.title) || !VENUES.includes(output.location) || typeof output.date!=='string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(output.date) || !Number.isFinite(Date.parse(output.date)) || new Date(output.date).toISOString()!==output.date || Date.parse(output.date)<=Date.now()) return fallback();
   return {suggestion:{title:output.title.trim(),date:output.date,location:output.location},message:'Review all suggested fields before using them. Nothing has been saved.'};
- } catch { return fallback(); }
- finally {clearTimeout(timer);}
 }

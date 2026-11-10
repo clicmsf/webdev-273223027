@@ -1,4 +1,4 @@
-// Optional browser checks: node --test test/ui.test.browser.mjs (requires Playwright).
+// Optional browser checks: node --test browser-tests/ui.test.browser.mjs (requires Playwright).
 // Uses a new temporary browser profile; never connects to the user's live Chrome.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,6 +20,16 @@ test('AC-15 AC-2 AC-4 AC-7 browser loading, success, empty, offline retry and ma
  await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.waitForURL('**/events');
  await page.getByRole('button',{name:'Reserve a place: Web Development Workshop',exact:true}).waitFor();
  assert.equal(await page.locator('.event').count(),3);
+ await page.route('**/api/registrations',async route=>{
+  if(route.request().method()==='POST') await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:'EventFull',message:'This event is full'})});
+  else await route.continue();
+ });
+ await page.getByRole('button',{name:'Reserve a place: Web Development Workshop',exact:true}).click();
+ await page.getByRole('alert').getByText('This event is full',{exact:true}).waitFor();
+ assert.equal(db.prepare('SELECT count(*) AS n FROM registrations').get().n,0);
+ await page.unrouteAll({behavior:'wait'});
+ await page.getByRole('button',{name:'Try again',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#events').getAttribute('aria-busy')==='false');
  await page.getByRole('button',{name:'Reserve a place: Web Development Workshop',exact:true}).click();
  await page.getByText('Your place is reserved',{exact:true}).waitFor();
  assert.equal(db.prepare('SELECT count(*) AS n FROM registrations').get().n,1);

@@ -45,3 +45,46 @@ This is Codex's review, not a claim of student review or hand-written student te
 - Adds no npm dependencies; model tests use fakes and no user data leaves the machine.
 - Adds implementation evidence and a student-review checklist because the assignment
   reserves plan review, architecture authorship and defence for the student.
+
+### Outcome and actual checkpoints
+- Restored the missing data layer; narrowed the ignore rule so src/data stays tracked.
+  Numbered migrations and original tests passed before the database commit.
+- New rule tests failed first for capacity, duplicate and past-event refusal; then
+  passed. API tests failed before endpoint implementation and passed afterward.
+- Added shared-service project MCP tools while retaining both lecture tools. Protocol
+  checks pass. Removed the existing raw incoming-message log to avoid logging data.
+- Model service verified only with injected fake clients/fetch; no external model call.
+  Provider documentation: https://ai.google.dev/api/generate-content .
+- Browser harness first had an unroute race (route already handled); fixed the test
+  to await the delayed request before removing its route. Product behavior was unchanged.
+- Mutation proof: removing the capacity check caused two expected test failures;
+  restored exact service bytes and reran the full suite successfully.
+- Windows course runner could not spawn npm (ENOENT); checks/lib.mjs now invokes
+  npm's JS entry point using Node on Windows, without a shell. No check was removed.
+- Service coverage passes 100% lines/functions/branches after adding fake provider
+  request/HTTP-error checks. Overall source line gate passes at 80%.
+- Added docs/feature-3.md as an explicitly agent-authored architecture draft and
+  docs/exercise-3-evidence.md with source links, reproducible checks and human tasks.
+- No new dependencies, account-data changes, remote pushes or assignment submissions.
+- Changed by hand by student: none in this session. Student review is outstanding.
+
+### Additional items found in the final diff
+- Kept a Windows runner portability fix; otherwise the course check could not run here.
+- Kept optional Playwright verification outside the default Node test glob so a clean
+  install can run core tests without adding a browser dependency.
+- Updated the old setup script to anchor /data/ as well, preventing the ignore bug
+  from being reintroduced for future source files.
+- Kept no-key poster drafts and MCP work because the exercise self-check requires them.
+- Retained AC-5 and AC-6 in an explicit deferred roadmap rather than fake passing tests.
+- Usage metrics remain unavailable; no invented token counts or billing cost.
+
+### Final validation
+- Course Exercise 3 self-check: 18/18. Exercise 2 regression check: 32/32.
+- Core suite: 16/16. Optional isolated-browser scenario: passed.
+- MCP conformance: 12/12. Host launcher pytest suite: 8/8.
+- Existing CI-equivalent service coverage gate passed with 100% lines, functions
+  and branches; overall source line gate passed above 80%.
+- Full source diff reviewed against 8d1f89a; corrected a text-encoding regression
+  found in README/package metadata and moved optional browser verification out of
+  Node's default test-directory discovery so clean CI does not require Playwright.
+- Final local tree committed. Push/remote CI and student review remain outstanding.

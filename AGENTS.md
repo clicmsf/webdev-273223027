@@ -3,19 +3,22 @@
 Read this file at the start of every session. See `SPEC.md` for the project contract.
 
 ## Project
-Club Events helps students view upcoming student-club activities and, later, register for places. Slice 1 includes local sign-in and a database-backed upcoming-events list.
+Club Events helps students view upcoming student-club activities and, later, register for places. Slice 2 adds reservations, owner-only cancellation, shared-service MCP tools and poster drafts.
 
 ## Commands
 - Install: `npm install`
 - Run: `npm start` (visit the forwarded port 3000)
 - Test: `npm test`
-- Coverage: `npm test` (the Exercise 3 coverage gate will be added later)
-- MCP server: `npm run mcp` (retains the Exercise 1 MCP server)
+- Migrate: `npm run migrate` (new or existing database, DB_PATH may override .local/club.db)
+- Browser verification: `node --test browser-tests/ui.test.browser.mjs` (optional Playwright installation required; separate temporary profile)
+- Self-check: `node checks/ex3.mjs`
+- Coverage: the existing CI commands enforce 100% service lines/functions/branches and 80% overall lines; no threshold changes.
+- MCP server: `npm run mcp` (retains lecture tools and adds three project tools; project identity comes from CLUB_SESSION_TOKEN, validated through the session service)
 
 ## Conventions
 - HTTP routing lives in `src/routes/`, business logic in `src/services/`, and database access with SQL only in `src/data/`.
 - The UI lives in `public/`; use 401 for API authorization errors, 302 for protected HTML pages, and JSON for API responses.
-- Do not implement full registrations, Google OAuth, or the model feature during Exercise 2.
+- Exercise 3 implements registrations and poster drafts; Google OAuth and organizer event CRUD remain deferred.
 
 ## Layers
 - HTTP route handler: `src/routes/http.mjs`
@@ -25,9 +28,9 @@ Club Events helps students view upcoming student-club activities and, later, reg
 
 ## The model feature
 - The planned provider is Gemini 2.5 Flash, and the future single call site will be `src/services/poster.mjs`.
-- Read `GEMINI_API_KEY` only from the environment; do not use a model in slice 1.
+- Read `GEMINI_API_KEY` only from the environment. No key means a manual-entry fallback.
 - Time out external calls and provide a manual-entry fallback without saving guesses.
-- Test model behavior using a fake client rather than a real API.
+- Test model behavior using a fake client rather than a real API. Only send an image when an organizer explicitly requests suggestions; never send account data.
 
 ## The MCP server
 - Lives in `mcp-server/`, grown out of Exercise 1.
