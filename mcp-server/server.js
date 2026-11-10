@@ -1,6 +1,13 @@
-const readline = require('node:readline');
-const fs = require('node:fs');
-const path = require('node:path');
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { openDatabase } from '../src/data/db.mjs';
+import { currentUser } from '../src/services/auth.mjs';
+import { listUpcomingEvents } from '../src/services/events.mjs';
+import { reservePlace, myRegistrations } from '../src/services/registrations.mjs';
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
+const db=openDatabase();
 
 const lectures = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'lectures.json'), 'utf8')
@@ -39,6 +46,12 @@ const tools = [
     }
   }
 ];
+
+tools.push(
+ { name:'upcoming_events',description:'List upcoming club events and available places for the authenticated member.',inputSchema:{type:'object',properties:{},additionalProperties:false} },
+ { name:'my_registrations',description:'List only the authenticated member reservations.',inputSchema:{type:'object',properties:{},additionalProperties:false} },
+ { name:'register_for_event',description:'Reserve one event place for the authenticated member; refuses full or duplicate events.',inputSchema:{type:'object',properties:{eventId:{type:'integer',minimum:1}},required:['eventId'],additionalProperties:false} }
+);
 
 // Send JSON-RPC response
 function send(reply) {
@@ -127,6 +140,19 @@ function handle(msg) {
   if (msg.method === 'tools/call') {
     const name = msg.params?.name;
     const args = msg.params?.arguments || {};
+
+    if (['upcoming_events','my_registrations','register_for_event'].includes(name)) {
+      const expected=name==='register_for_event'?['eventId']:[];
+      if (Object.keys(args).some(key=>!expected.includes(key))) return protocolError(msg.id,-32602,'Unexpected argument');
+      const user=currentUser(db,{headers:{cookie:'club_session='+(process.env.CLUB_SESSION_TOKEN || '')}});
+      if (!user) return textResult(msg.id,JSON.stringify({error:'Unauthenticated',status:401,message:'Sign in first'}),true);
+      try {
+        const result=name==='upcoming_events'?listUpcomingEvents(db):name==='my_registrations'?myRegistrations(db,user.id):reservePlace(db,user.id,args.eventId);
+        return textResult(msg.id,JSON.stringify(result));
+      } catch(error) {
+        return textResult(msg.id,JSON.stringify({error:error.name,status:error.status || 500,message:error.status?error.message:'Tool failed'}),true);
+      }
+    }
 
     // Tool 1: Find lecture
     if (name === 'find_lecture') {
@@ -222,7 +248,7 @@ const lines = readline.createInterface({
 });
 
 lines.on('line', (line) => {
-  console.error('got: ' + line);
+  // Never log tool arguments or session identity.
 
   let msg;
 
@@ -233,9 +259,11 @@ lines.on('line', (line) => {
     return;
   }
 
+  if (!msg || typeof msg!=='object') { send(protocolError(null,-32600,'Invalid request')); return; }
   const reply = handle(msg);
 
   if (reply) {
     send(reply);
   }
 });
+lines.on('close',()=>db.close());
