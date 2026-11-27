@@ -27,7 +27,7 @@ test('AC-4 AC-13 only the owner cancels; cancellation frees a place',async t=>{
  assert.equal((await myRegistrations(db,2))[0].id,b.id);
  assert.equal((await reservePlace(db,2,1)).event_id,1);
 });
-test.skip('AC-14 service handles invalid ids, missing and past events and missing cancellations',async t=>{
+test('AC-14 service handles invalid ids, missing and past events and missing cancellations',async t=>{
  const db=await fixture(t);
  await assert.rejects(async ()=>reservePlace(db,null,1),refusal('Unauthenticated',401));
  assert.throws(()=>myRegistrations(db,null),refusal('Unauthenticated',401));
