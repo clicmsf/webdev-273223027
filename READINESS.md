@@ -31,9 +31,9 @@ How I checked: ran the container with the working Neon URL and again with a bad 
 
 ## 4. Four states of one screen
 
-The events screen's code has a loading message, a content list, an actionable empty message, an alert with retry on request failure, and a success message after a reservation change. I have not demonstrated all four states in a browser or saved the requested screenshots, so these remain unverified UI claims.
+The events screen's code has a loading message, a content list, an actionable empty message, an alert with retry on request failure, and a success message after a reservation change. Browser testing captured loading, three-event content, empty guidance, offline error/retry and reservation success under docs/ui/. The poster flow also captured its thinking indicator and unavailable-provider fallback. These are local fixture observations, not a live deployment or real model-latency measurement.
 
-How I checked: inspected `public/events-client.mjs`; the optional Playwright run stopped because the `playwright` package was unavailable. I did not claim the source strings as observed states.
+How I checked: ran the isolated Chromium test and saved the seven captures listed in docs/UI.md.
 
 ## 5. Request waterfall
 
@@ -58,8 +58,8 @@ How I checked: ran the broad and sharper Git-history searches; inspected the coo
 2. **Google sign-in is not implemented.** The project specification defers OAuth; no provider button, redirect flow or live callback is available. Next: implement the state/PKCE flow and configure an OAuth client before claiming provider sign-in works.  
    How I checked: checked `SPEC.md` and the auth routes; `.env.example` contains unused placeholders only.
 
-3. **Required UI evidence is incomplete.** The four states, model thinking/failure, requested screenshots, 380/768/1280 widths, contrast and touch-target sizes have not all been checked. Next: run the browser checks, capture the required evidence and keep unsupported items unticked.  
-   How I checked: reviewed `docs/UI.md`; the optional browser test could not import `playwright`, and no screenshots are saved.
+3. **Some UI checks remain incomplete.** Screenshots now cover the four event-list states, reservation success and model thinking/fallback. Loading onset was not measured against 100 ms; widths 380/768/1280, contrast and touch-target sizes remain unchecked. Next: measure those and keep unsupported checklist items unticked.
+   How I checked: installed Playwright transiently in Codespaces with no manifest/lockfile change, ran the browser test successfully (1/1), and verified seven PNGs under docs/ui/. Only local fixture states and recorded viewport sizes were checked; remaining measurements are listed in docs/UI.md.
 
 4. **Persistence across a production redeploy and rollback are unverified.** A reservation is present in Neon, but it has not been created on a live Render site, survived a Render redeploy, or been restored by rollback. Next: record a recognizable live row, redeploy, reload and time a real rollback.  
    How I checked: Neon showed the locally created row; no Render service or deploy event exists.

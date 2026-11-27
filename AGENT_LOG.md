@@ -137,3 +137,7 @@ This is Codex's review, not a claim of student review or hand-written student te
 - Google OAuth and the organizer management screen remain deferred in `SPEC.md`. No OAuth credentials were entered and no live Google sign-in was tested. The Gemini provider was not called; model tests use fakes. MCP tools remain a local stdio server and are not hosted publicly.
 - UI four-state and model screenshots, network waterfall measurement, live second-account ownership attempt, Render redeploy persistence test and real rollback timing remain outstanding. No values or timings were guessed.
 - Usage figures for this Codex session are unavailable and recorded as such; no token or cost estimate was invented.
+
+## 2026-11-27  Browser evidence follow-up
+- Correction to the earlier note: installed Playwright transiently in Codespaces (no manifest/lockfile change); the browser evidence test passed 1/1 and generated seven PNG screenshots in docs/ui/ for event content, loading, empty, offline error, reservation success, model thinking and unavailable-provider fallback.
+- These use isolated local fixtures and a held poster request, not a live Render or model-provider test. Loading onset, widths 380/768/1280, contrast and touch targets remain unmeasured and are left incomplete in docs/UI.md.
