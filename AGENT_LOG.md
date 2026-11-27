@@ -126,3 +126,14 @@ This is Codex's review, not a claim of student review or hand-written student te
   /tmp was unavailable for one coverage attempt; the workspace rerun passed.
 - GitHub connected for this request; publication uses the connected account's
   GitHub commit/tree/ref API with an expected-head lease and no force update.
+
+## 2026-11-27 — Exercise 4 deployment and readiness work
+- Goal: complete the production deployment, readiness report, UI evidence, persistence and rollback checks.
+- Implemented and pushed: Postgres-backed data layer and migrations, startup guard, health and error responses, Docker image, CI coverage gate, OAuth placeholders required by the course structure check.
+- Verified from the Codespace: migrations and demo member seeded in Neon Frankfurt; a reservation was created and appeared in Neon. Container `/health` returned 200 with a working database and 503 with a bad database URL. Local HTTP checks returned 404 for a missing page, 400 for malformed JSON and 401 for an anonymous write. Error details appeared in the server log. The 20-test suite passed; service coverage gates passed at 100%, and overall `src` line coverage was 82.73%. The deliberately broken coverage commit failed at 98.94% branch coverage; the restored latest commit has green GitHub Actions checks.
+- Browser UI evidence: opened the forwarded HTTPS login screen; verified title `Sign in | Club Events`, `lang=en`, email/password labels, no horizontal overflow at 1363 CSS pixels and a visible solid 3-pixel password focus outline. The optional browser test did not run because `playwright` is not installed.
+- Deployment finding: the service is not live. Render's current new-service form is set to the GitHub repository, `main`, Docker, Free and Frankfurt, but the deployment was not created. The prior deploy attempt opened a card-verification dialog stating a temporary $1 authorization; the Render dashboard had no service afterwards. No public URL, live health check, redeploy persistence or rollback time is verified.
+- False claim corrected: I previously treated Render configuration as a created free service. The dashboard showed only the new-service workflow and no deployed service; the attempt stopped at card verification.
+- Google OAuth and the organizer management screen remain deferred in `SPEC.md`. No OAuth credentials were entered and no live Google sign-in was tested. The Gemini provider was not called; model tests use fakes. MCP tools remain a local stdio server and are not hosted publicly.
+- UI four-state and model screenshots, network waterfall measurement, live second-account ownership attempt, Render redeploy persistence test and real rollback timing remain outstanding. No values or timings were guessed.
+- Usage figures for this Codex session are unavailable and recorded as such; no token or cost estimate was invented.
