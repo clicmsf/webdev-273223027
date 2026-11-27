@@ -10,7 +10,7 @@ let temp, db, server, base;
 before(async () => {
   temp = mkdtempSync(join(tmpdir(), 'club-events-'));
   db = openDatabase(join(temp, 'test.db'));
-  upsertDemoUser(db, 'test-pass-123');
+  await upsertDemoUser(db, 'test-pass-123');
   server = createApp(db);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -49,21 +49,21 @@ test('AC-10 login displays 3 future database events in chronological order', asy
   assert.equal(events.length, 3);
   assert.ok(events.every((e) => typeof e.title === 'string' && e.date > new Date().toISOString() && e.free_places > 0));
   assert.deepEqual(events.map((e) => e.id), [1, 2, 3]);
-  assert.deepEqual(events.map((e) => e.title), getAllEvents(db).map((e) => e.title));
+  assert.deepEqual(events.map((e) => e.title), (await getAllEvents(db)).map((e) => e.title));
 });
 
 test('AC-11 removing a SQLite row removes exactly that event after reload', async () => {
   const cookie = await login();
   const beforeResponse = await fetch(`${base}/api/events`, { headers: { Cookie: cookie } });
   const beforeEvents = (await beforeResponse.json()).events;
-  assert.equal(deleteEvent(db, 2), 1);
+  assert.equal(await deleteEvent(db, 2), 1);
   try {
     const afterResponse = await fetch(`${base}/api/events`, { headers: { Cookie: cookie } });
     const afterEvents = (await afterResponse.json()).events;
     assert.deepEqual(afterEvents.map((e) => e.id), [1, 3]);
     assert.equal(afterEvents.length, beforeEvents.length - 1);
   } finally {
-    restoreEvent(db, 2);
+    await restoreEvent(db, 2);
   }
 });
 
@@ -89,15 +89,15 @@ test('AC-18 sign out deletes the session', async () => {
 
 test('authentication handles invalid inputs, missing cookies and secure forwarding', async () => {
   const { authenticate, readSessionToken, currentUser, endSession, sessionCookie, clearSessionCookie } = await import('../src/services/auth.mjs');
-  assert.equal(authenticate(db, null, 'not-correct'), null);
-  assert.equal(authenticate(db, DEMO_EMAIL, null), null);
-  assert.equal(authenticate(db, DEMO_EMAIL, 'wrong-password'), null);
+  assert.equal(await authenticate(db, null, 'not-correct'), null);
+  assert.equal(await authenticate(db, DEMO_EMAIL, null), null);
+  assert.equal(await authenticate(db, DEMO_EMAIL, 'wrong-password'), null);
   const anonymous = { headers: {}, socket: { encrypted: false } };
   assert.equal(readSessionToken(anonymous), null);
   assert.equal(readSessionToken({ headers: { cookie: 'other=value' } }), null);
   assert.equal(readSessionToken({ headers: { cookie: 'club_session=broken' } }), null);
   assert.equal(currentUser(db, anonymous), null);
-  endSession(db, anonymous);
+  await endSession(db, anonymous);
   assert.match(sessionCookie({ headers: {}, socket: { encrypted: true } }, 'test'), /; Secure$/);
   assert.match(clearSessionCookie({ headers: { 'x-forwarded-proto': 'https' }, socket: {} }), /; Secure$/);
   assert.doesNotMatch(sessionCookie(anonymous, 'test'), /; Secure$/);

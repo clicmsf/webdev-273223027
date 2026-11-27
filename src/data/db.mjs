@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { postgresTransaction } from './postgres.mjs';
 
 export const DEMO_EMAIL = 'student@example.test';
 export function migrate(db) {
@@ -24,7 +25,7 @@ export function openDatabase(filename = process.env.DB_PATH || '.local/club.db')
   const fresh = !db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'").get();
   migrate(db);
   if (fresh) {
-    for (let id=1; id<=3; id++) restoreEvent(db,id);
+    for (let id=1; id<=3; id++) seedEvent(db,id);
   }
   return db;
 }
@@ -38,35 +39,90 @@ export function verifyPassword(password, encoded) {
   const actual = scryptSync(password, salt, 64);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
-export function upsertDemoUser(db, password) {
-  if (findUserByEmail(db, DEMO_EMAIL)) return { created:false };
-  db.prepare('INSERT INTO users(email,password_hash) VALUES (?,?)').run(DEMO_EMAIL,hashPassword(password));
-  return { created:true };
+export async function upsertDemoUser(db, password) {
+  if (await findUserByEmail(db, DEMO_EMAIL)) return { created: false };
+  const changes = await write(db, 'INSERT INTO users (email, password_hash) VALUES (?, ?) ON CONFLICT (email) DO NOTHING', [DEMO_EMAIL, hashPassword(password)]);
+  return { created: changes === 1 };
 }
-export const findUserByEmail = (db,email) => db.prepare('SELECT * FROM users WHERE email=?').get(email);
-export const findUserBySessionHash = (db,hash) => db.prepare('SELECT u.id,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?').get(hash,Date.now());
-export const storeSession = (db,hash,id,expires) => db.prepare('INSERT INTO sessions VALUES (?,?,?)').run(hash,id,expires);
-export const removeSession = (db,hash) => db.prepare('DELETE FROM sessions WHERE token_hash=?').run(hash);
-export const getAllEvents = db => db.prepare('SELECT * FROM events ORDER BY start_at,id').all();
-export const getUpcomingEvents = db => db.prepare(`SELECT e.id,e.title,e.start_at AS date,e.capacity-count(r.id) AS free_places FROM events e LEFT JOIN registrations r ON r.event_id=e.id WHERE e.start_at>? GROUP BY e.id ORDER BY e.start_at,e.id`).all(new Date().toISOString());
-export const deleteEvent = (db,id) => db.prepare('DELETE FROM events WHERE id=?').run(id).changes;
-export function restoreEvent(db,id) {
-  const title=['Web Development Workshop','Student Club Meetup','Project Showcase'][id-1];
-  const date=new Date(Date.now()+id*86400000*7).toISOString();
-  return db.prepare('INSERT OR IGNORE INTO events VALUES (?,?,?,?)').run(id,title,date,20).changes;
+
+function postgresSql(sql) {
+  let index = 0;
+  return sql.replaceAll('?', () => '$' + ++index);
 }
+
+function normalizeDates(row) {
+  for (const name of ['date', 'start_at', 'created_at']) {
+    if (row[name] instanceof Date) row[name] = row[name].toISOString();
+  }
+  return row;
+}
+
+async function all(db, sql, args = []) {
+  if (!db.query) return db.prepare(sql).all(...args);
+  const { rows } = await db.query(postgresSql(sql), args);
+  return rows.map(normalizeDates);
+}
+
+async function one(db, sql, args = []) {
+  if (!db.query) return db.prepare(sql).get(...args);
+  const { rows } = await db.query(postgresSql(sql), args);
+  return rows[0] && normalizeDates(rows[0]);
+}
+
+async function write(db, sql, args = []) {
+  if (!db.query) return db.prepare(sql).run(...args).changes;
+  const { rowCount } = await db.query(postgresSql(sql), args);
+  return rowCount;
+}
+
+export const findUserByEmail = (db, email) => one(db, 'SELECT * FROM users WHERE email=?', [email]);
+export const findUserBySessionHash = (db, hash) => one(db, 'SELECT u.id,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?', [hash, Date.now()]);
+export const storeSession = (db, hash, id, expires) => write(db, 'INSERT INTO sessions VALUES (?,?,?)', [hash, id, expires]);
+export const removeSession = (db, hash) => write(db, 'DELETE FROM sessions WHERE token_hash=?', [hash]);
+export const getAllEvents = (db) => all(db, 'SELECT * FROM events ORDER BY start_at,id');
+export const getUpcomingEvents = (db) => all(db, `SELECT e.id,e.title,e.start_at AS date,CAST(e.capacity-count(r.id) AS integer) AS free_places FROM events e LEFT JOIN registrations r ON r.event_id=e.id WHERE e.start_at>? GROUP BY e.id ORDER BY e.start_at,e.id`, [new Date().toISOString()]);
+export const deleteEvent = (db, id) => write(db, 'DELETE FROM events WHERE id=?', [id]);
+
+const eventTitles = ['Web Development Workshop', 'Student Club Meetup', 'Project Showcase'];
+const seedSql = 'INSERT INTO events VALUES (?,?,?,?) ON CONFLICT (id) DO NOTHING';
+const seedValues = (id) => [id, eventTitles[id-1], new Date(Date.now()+id*86400000*7).toISOString(), 20];
+
+function seedEvent(db, id) {
+  return db.prepare(seedSql).run(...seedValues(id));
+}
+
+export const restoreEvent = (db, id) => write(db, seedSql, seedValues(id));
+
+const sqliteTransactions = new WeakMap();
+
 export function transaction(db, action) {
-  db.exec('BEGIN IMMEDIATE');
-  try { const result=action(); db.exec('COMMIT'); return result; }
-  catch(e) { db.exec('ROLLBACK'); throw e; }
+  if (db.query) return postgresTransaction(db, action);
+
+  const run = async () => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = await action(db);
+      db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  };
+  const previous = sqliteTransactions.get(db) || Promise.resolve();
+  const pending = previous.then(run, run);
+  sqliteTransactions.set(db, pending);
+  return pending;
 }
-export const getEvent = (db,id) => db.prepare('SELECT * FROM events WHERE id=?').get(id);
-export const registrationCount = (db,id) => db.prepare('SELECT count(*) AS n FROM registrations WHERE event_id=?').get(id).n;
-export const findRegistration = (db,userId,eventId) => db.prepare('SELECT * FROM registrations WHERE user_id=? AND event_id=?').get(userId,eventId);
-export const getRegistration = (db,id) => db.prepare('SELECT * FROM registrations WHERE id=?').get(id);
-export function insertRegistration(db,userId,eventId) {
-  const result=db.prepare('INSERT INTO registrations(user_id,event_id) VALUES (?,?)').run(userId,eventId);
-  return getRegistration(db,Number(result.lastInsertRowid));
+
+export const getEvent = (db, id) => one(db, db.query ? 'SELECT * FROM events WHERE id=? FOR UPDATE' : 'SELECT * FROM events WHERE id=?', [id]);
+export const registrationCount = async (db, id) => (await one(db, 'SELECT count(*) AS n FROM registrations WHERE event_id=?', [id])).n;
+export const findRegistration = (db, userId, eventId) => one(db, 'SELECT * FROM registrations WHERE user_id=? AND event_id=?', [userId, eventId]);
+export const getRegistration = (db, id) => one(db, db.query ? 'SELECT * FROM registrations WHERE id=? FOR UPDATE' : 'SELECT * FROM registrations WHERE id=?', [id]);
+export const insertRegistration = (db, userId, eventId) => one(db, 'INSERT INTO registrations (user_id,event_id) VALUES (?,?) RETURNING *', [userId, eventId]);
+export const deleteRegistration = (db, id) => write(db, 'DELETE FROM registrations WHERE id=?', [id]);
+export const getUserRegistrations = (db, id) => all(db, 'SELECT r.*,e.title,e.start_at AS date FROM registrations r JOIN events e ON e.id=r.event_id WHERE r.user_id=? ORDER BY e.start_at,r.id', [id]);
+
+export async function checkDatabase(db) {
+  await one(db, 'SELECT 1');
 }
-export const deleteRegistration = (db,id) => db.prepare('DELETE FROM registrations WHERE id=?').run(id);
-export const getUserRegistrations = (db,id) => db.prepare('SELECT r.*,e.title,e.start_at AS date FROM registrations r JOIN events e ON e.id=r.event_id WHERE r.user_id=? ORDER BY e.start_at,r.id').all(id);

@@ -9,7 +9,7 @@ import { createApp } from '../src/routes/http.mjs';
 
 test('AC-15 AC-2 AC-4 AC-7 browser loading, success, empty, offline retry and manual draft',async t=>{
  delete process.env.GEMINI_API_KEY;
- const db=openDatabase(':memory:');upsertDemoUser(db,'test-only-password');
+ const db=openDatabase(':memory:');await upsertDemoUser(db,'test-only-password');
  const server=createApp(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({channel:'chrome',headless:true});
  const context=await browser.newContext({viewport:{width:390,height:844}});const page=await context.newPage();

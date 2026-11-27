@@ -7,23 +7,23 @@ function identity(userId) { if (!Number.isSafeInteger(userId) || userId<1) fail(
 function identifier(id) { if (!Number.isSafeInteger(id) || id<1) fail('InvalidInput','Choose a valid event or reservation',422); }
 export function reservePlace(db,userId,eventId) {
  identity(userId); identifier(eventId);
- return transaction(db,()=> {
-  const event=getEvent(db,eventId);
+ return transaction(db,async (connection)=> {
+  const event=await getEvent(connection,eventId);
   if (!event) fail('NotFound','Event not found',404);
   if (event.start_at<=new Date().toISOString()) fail('EventPast','This event has already started',409);
-  if (findRegistration(db,userId,eventId)) fail('AlreadyRegistered','You already reserved a place',409);
+  if (await findRegistration(connection,userId,eventId)) fail('AlreadyRegistered','You already reserved a place',409);
   // Capacity rule: the transaction serializes this check with the insert.
-  if (registrationCount(db,eventId)>=event.capacity) fail('EventFull','This event is full',409);
-  return insertRegistration(db,userId,eventId);
+  if (await registrationCount(connection,eventId)>=event.capacity) fail('EventFull','This event is full',409);
+  return await insertRegistration(connection,userId,eventId);
  });
 }
 export function cancelReservation(db,userId,id) {
  identity(userId); identifier(id);
- return transaction(db,()=>{
-  const registration=getRegistration(db,id);
+ return transaction(db,async (connection)=>{
+  const registration=await getRegistration(connection,id);
   if (!registration) fail('NotFound','Reservation not found',404);
   if (registration.user_id!==userId) fail('NotOwner','Only the reservation owner may cancel',403);
-  deleteRegistration(db,id);
+  await deleteRegistration(connection,id);
  });
 }
 export function myRegistrations(db,userId) { identity(userId); return getUserRegistrations(db,userId); }

@@ -44,9 +44,9 @@ test('Exercise 1: malformed messages return protocol errors and the same server 
 
 test('AC-8 MCP uses shared capacity rule and validates session identity',async t=>{
  const folder=mkdtempSync(join(tmpdir(),'club-mcp-')); const filename=join(folder,'test.db');
- const db=openDatabase(filename); upsertDemoUser(db,'test-only-password');
+ const db=openDatabase(filename); await upsertDemoUser(db,'test-only-password');
  db.prepare('UPDATE events SET capacity=1 WHERE id=1').run();
- const session=authenticate(db,'student@example.test','test-only-password');
+ const session=await authenticate(db,'student@example.test','test-only-password');
  t.after(()=>{db.close();rmSync(folder,{recursive:true,force:true});});
  async function client(token) {
   const child=spawn(process.execPath,['mcp-server/server.js'],{env:{...process.env,DB_PATH:filename,CLUB_SESSION_TOKEN:token},stdio:['pipe','pipe','pipe']});

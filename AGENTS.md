@@ -9,7 +9,7 @@ Club Events helps students view upcoming student-club activities and, later, reg
 - Install: `npm install`
 - Run: `npm start` (visit the forwarded port 3000)
 - Test: `npm test`
-- Migrate: `npm run migrate` (new or existing database, DB_PATH may override .local/club.db)
+- Migrate: `npm run migrate` (applies pending Postgres migrations to `DATABASE_URL`)
 - Browser verification: `node --test browser-tests/ui.test.browser.mjs` (optional Playwright installation required; separate temporary profile)
 - Self-check: `node checks/ex3.mjs`
 - Coverage: the existing CI commands enforce 100% service lines/functions/branches and 80% overall lines; no threshold changes.

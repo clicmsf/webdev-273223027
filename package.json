@@ -8,10 +8,11 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "mcp": "node mcp-server/server.js",
-    "start": "node src/server.mjs",
-    "setup": "node scripts/seed-account.mjs",
-    "migrate": "node scripts/migrate.mjs"
+    "mcp": "node --env-file-if-exists=.env mcp-server/server.js",
+    "start": "node --env-file-if-exists=.env src/server.mjs",
+    "setup": "node --env-file-if-exists=.env scripts/seed-account.mjs",
+    "migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include='src/services/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 && node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=80"
   },
   "repository": {
     "type": "git",
@@ -25,5 +26,8 @@
   },
   "homepage": "https://github.com/clicmsf/webdev-273223027#readme",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
 }

@@ -1,0 +1,12 @@
+**
+!package.json
+!package-lock.json
+!migrations/
+!migrations/postgres/
+!migrations/postgres/*.sql
+!public/
+!public/**
+!scripts/
+!scripts/**
+!src/
+!src/**

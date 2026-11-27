@@ -5,11 +5,11 @@ const COOKIE = 'club_session';
 const MAX_AGE_SECONDS = 60 * 60 * 24;
 const digest = (token) => createHash('sha256').update(token).digest('hex');
 
-export function authenticate(db, email, password) {
-  const user = findUserByEmail(db, String(email || '').trim().toLowerCase());
+export async function authenticate(db, email, password) {
+  const user = await findUserByEmail(db, String(email || '').trim().toLowerCase());
   if (!user || typeof password !== 'string' || !verifyPassword(password, user.password_hash)) return null;
   const token = randomBytes(32).toString('hex');
-  storeSession(db, digest(token), user.id, Date.now() + MAX_AGE_SECONDS * 1000);
+  await storeSession(db, digest(token), user.id, Date.now() + MAX_AGE_SECONDS * 1000);
   return { token, user: { id: user.id, email: user.email, role: user.role } };
 }
 
@@ -25,9 +25,9 @@ export function currentUser(db, req) {
   return token ? findUserBySessionHash(db, digest(token)) : null;
 }
 
-export function endSession(db, req) {
+export async function endSession(db, req) {
   const token = readSessionToken(req);
-  if (token) removeSession(db, digest(token));
+  if (token) await removeSession(db, digest(token));
 }
 
 const cookieSecure = (req) => req.socket.encrypted || req.headers['x-forwarded-proto'] === 'https';

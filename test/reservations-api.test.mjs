@@ -4,7 +4,7 @@ import { openDatabase, upsertDemoUser, hashPassword } from '../src/data/db.mjs';
 import { createApp } from '../src/routes/http.mjs';
 
 test('AC-1 AC-2 AC-3 AC-4 AC-12 AC-13 AC-14 real HTTP reservation lifecycle and refusals',async t=>{
- const db=openDatabase(':memory:'); upsertDemoUser(db,'test-only-password');
+ const db=openDatabase(':memory:'); await upsertDemoUser(db,'test-only-password');
  db.prepare('INSERT INTO users(email,password_hash) VALUES (?,?)').run('second@example.test',hashPassword('test-only-password'));
  db.prepare('UPDATE events SET capacity=1 WHERE id=1').run();
  const server=createApp(db); await new Promise(r=>server.listen(0,'127.0.0.1',r));

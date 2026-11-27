@@ -3,11 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDatabase } from '../src/data/db.mjs';
+import { openPostgres } from '../src/data/postgres.mjs';
 import { currentUser } from '../src/services/auth.mjs';
 import { listUpcomingEvents } from '../src/services/events.mjs';
 import { reservePlace, myRegistrations } from '../src/services/registrations.mjs';
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
-const db=openDatabase();
+const db = process.env.DATABASE_URL ? openPostgres() : openDatabase();
 
 const lectures = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'lectures.json'), 'utf8')
@@ -95,7 +96,7 @@ function topicsOf(lecture) {
 }
 
 // Handle incoming messages
-function handle(msg) {
+async function handle(msg) {
   const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
   if (!isObject(msg) || msg.jsonrpc !== '2.0' || typeof msg.method !== 'string' ||
       (msg.id !== undefined && msg.id !== null && typeof msg.id !== 'string' && typeof msg.id !== 'number')) {
@@ -160,10 +161,10 @@ function handle(msg) {
       if (name === 'register_for_event' && (!Number.isInteger(args.eventId) || args.eventId < 1)) {
         return protocolError(msg.id, -32602, 'Event id must be a positive integer');
       }
-      const user=currentUser(db,{headers:{cookie:'club_session='+(process.env.CLUB_SESSION_TOKEN || '')}});
-      if (!user) return textResult(msg.id,JSON.stringify({error:'Unauthenticated',status:401,message:'Sign in first'}),true);
       try {
-        const result=name==='upcoming_events'?listUpcomingEvents(db):name==='my_registrations'?myRegistrations(db,user.id):reservePlace(db,user.id,args.eventId);
+        const user=await currentUser(db,{headers:{cookie:'club_session='+(process.env.CLUB_SESSION_TOKEN || '')}});
+        if (!user) return textResult(msg.id,JSON.stringify({error:'Unauthenticated',status:401,message:'Sign in first'}),true);
+        const result=name==='upcoming_events'?await listUpcomingEvents(db):name==='my_registrations'?await myRegistrations(db,user.id):await reservePlace(db,user.id,args.eventId);
         return textResult(msg.id,JSON.stringify(result));
       } catch(error) {
         return textResult(msg.id,JSON.stringify({error:error.name,status:error.status || 500,message:error.status?error.message:'Tool failed'}),true);
@@ -263,7 +264,9 @@ const lines = readline.createInterface({
   input: process.stdin
 });
 
-lines.on('line', (line) => {
+let pending = Promise.resolve();
+
+async function handleLine(line) {
   // Never log tool arguments or session identity.
 
   let msg;
@@ -276,10 +279,18 @@ lines.on('line', (line) => {
   }
 
   if (!msg || typeof msg!=='object') { send(protocolError(null,-32600,'Invalid request')); return; }
-  const reply = handle(msg);
+  const reply = await handle(msg);
 
   if (reply) {
     send(reply);
   }
+}
+
+lines.on('line', (line) => {
+  pending = pending.then(() => handleLine(line));
 });
-lines.on('close',()=>db.close());
+lines.on('close', async () => {
+  await pending;
+  if (db.end) await db.end();
+  else db.close();
+});
