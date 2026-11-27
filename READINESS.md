@@ -2,81 +2,80 @@
 
 ## 1. Live URL and how to verify it
 
-There is no verified public URL yet. The Render configuration form has the repository, `main`, Docker, Frankfurt and Free selected, but no service has been created, so `course.json` remains blank. I will not put a predicted `onrender.com` address in the course manifest. A local container answered successfully, but that is not a public deployment and does not prove Render health.
+Live URL: https://webdev-273223027.onrender.com
 
-How I checked: the Render dashboard remained on “New Web Service”; the earlier deployment attempt opened card verification with a stated temporary $1 authorization and no service appeared. Locally, the container health endpoint returned 200 when Neon answered.
+The Render service is live over HTTPS. `GET /health` returned `{"status":"ok","db":"ok"}`, and the live events page showed three upcoming events. I reserved Project Showcase before the next deploy. After a redeploy and rollback, the same reservation was still visible in the events page.
+
+How I checked: opened Render and confirmed the live service, opened the health URL, reserved Project Showcase on the live events page, then reloaded that page after a deploy and after rollback. Neon Tables also showed registration rows in the connected database.
 
 ## 2. Environment variables
 
-| Name | Purpose | Where the value comes from | Secret? | Current deployment state |
+| Name | Purpose | Where the value comes from | Secret? | Current state |
 | --- | --- | --- | --- | --- |
-| `DATABASE_URL` | Required Postgres connection | Neon project Connect panel | Yes | Neon is configured locally; not entered in Render |
-| `PORT` | HTTP listener | Render supplies it; local default is 3000 | No | Not applicable until deploy |
-| `DB_PATH` | Optional SQLite path for standalone MCP when Postgres is unset | Local default `.local/club.db` | No | Not used by the Render HTTP server |
-| `SEED_PASSWORD` | Password used by the one-time demo-account setup script | Chosen locally for setup | Yes | Not needed by the running server |
-| `GEMINI_API_KEY` | Optional poster suggestions | Google AI Studio | Yes | Not configured; manual-entry fallback remains available |
-| `CLUB_SESSION_TOKEN` | Authenticated identity for local stdio MCP project tools | A valid Club Events session | Yes | Not configured in Render; MCP is local |
-| `GOOGLE_CLIENT_ID` | Placeholder for future Google OAuth | Google Cloud OAuth client | No | Unused; OAuth is deferred |
-| `GOOGLE_CLIENT_SECRET` | Placeholder for future Google OAuth | Google Cloud OAuth client | Yes | Unused; OAuth is deferred |
+| `DATABASE_URL` | Required Postgres connection for the HTTP app | Neon project Connect panel | Yes | Set in Render; live health and saved registrations confirm it reaches Neon |
+| `PORT` | HTTP listener port | Render supplies it; local default is 3000 | No | Supplied by Render |
+| `DB_PATH` | Optional SQLite file for standalone MCP when no database URL is set | Local path; default is `.local/club.db` | No | Not used by the production HTTP server |
+| `SEED_PASSWORD` | Password for the one-time demo-account setup command | Chosen for `npm run setup` | Yes | Setup-only; not required by the running service |
+| `GEMINI_API_KEY` | Optional key for poster suggestions | Google AI Studio | Yes | Not configured; the manual-entry fallback remains available |
+| `CLUB_SESSION_TOKEN` | Authenticated identity for local stdio MCP project tools | A valid Club Events session | Yes | Local MCP only; no hosted MCP service |
 
-How I checked: compared `.env.example` with the startup, migration, setup, model and MCP code. The only variable required by the production HTTP startup is `DATABASE_URL`; the other values are optional, local-only, setup-only, or deferred.
+How I checked: searched the application, scripts and MCP code for `process.env` reads, compared the results with `.env.example`, and ran `DATABASE_URL= npm start`. Startup exited with `missing DATABASE_URL: see .env.example`. OAuth placeholders were removed from `.env.example` because the app does not read them.
 
 ## 3. What happens when things fail
 
-With the database reachable, `GET /health` returned HTTP 200 and `{"status":"ok","db":"ok"}`. With a deliberately bad database address, it returned HTTP 503 and `{"status":"error","db":"down"}`. A missing path returned 404. Malformed JSON to a write route returned 400 with a short response; a valid anonymous write returned 401. The error details went to the server log.
+With Neon reachable, the live health endpoint returned HTTP 200 and `{"status":"ok","db":"ok"}`. The live missing route returned `{"error":"Not found"}`. Local HTTP tests showed that a failed database query returns HTTP 503 with `{"status":"error","db":"down"}`, malformed JSON to `POST /api/registrations` returns HTTP 400 with one short sentence, and a valid anonymous write returns HTTP 401. The server logs the internal error details.
 
-A Render rollback has not been attempted because no Render service exists. There is no measured rollback duration.
+I tested the CI gate with a deliberately incorrect health-test expectation. GitHub Actions failed that commit, and Render Events showed no deployment for it. After restoring the test, the next green commit deployed. I then deployed a visible heading change and rolled back to the prior deploy. Render's event times show rollback started at 7:11:35 PM and the service was live at 7:11:50 PM on 27 November 2026: 15 seconds by the Render timeline. The rollback restored the original heading. Render disabled auto-deploy during rollback; I set it back to `After CI Checks Pass` and confirmed that option was selected. I did not send malformed JSON or an anonymous write to the live endpoint.
 
-How I checked: ran the container with the working Neon URL and again with a bad URL, then used local HTTP requests for the missing route, malformed JSON and anonymous write. I inspected the server log for the error detail.
+How I checked: ran `npm test` (20/20), `npm run coverage`, and the missing-variable startup command; opened the live missing route and health endpoint; checked the failed and restored Actions runs, the Render Events page and the post-rollback service setting.
 
 ## 4. Four states of one screen
 
-The events screen's code has a loading message, a content list, an actionable empty message, an alert with retry on request failure, and a success message after a reservation change. Browser testing captured loading, three-event content, empty guidance, offline error/retry and reservation success under docs/ui/. The poster flow also captured its thinking indicator and unavailable-provider fallback. These are local fixture observations, not a live deployment or real model-latency measurement.
+The browser test captured the events list with content, loading, empty, error/retry and reservation-success states. The live events page showed the loading message, three-event content and success message after I reserved Project Showcase. The empty and offline-error screenshots use isolated local browser-test fixtures, not live observations.
 
-How I checked: ran the isolated Chromium test and saved the seven captures listed in docs/UI.md.
+How I checked: ran `node --test browser-tests/ui.test.browser.mjs` in the earlier session and reviewed the seven linked captures in `docs/UI.md`. On the live page I saw `Loading events...`, three events after loading, and `Your place is reserved.` after the write. The reservation remained after a redeploy and rollback.
 
 ## 5. Request waterfall
 
-No request count, Finish time or dependency order has been recorded. I did not measure the events screen in DevTools with cache disabled.
+I did not record a request count, dependency order or Finish time for the live events screen, so this section has no guessed timings.
 
-How I checked: there is no saved Network panel capture or timing note from this session; no request total or duration is reported.
+How I checked: no Network-panel capture or timing note was saved for the live events page.
 
 ## 6. Security basics checked
 
-- The repository and commit history secret search found placeholders, variable names and code expressions, not an actual secret. No `.env` was committed.
-- Anonymous write access was refused with HTTP 401. Automated service and HTTP tests cover the separate owner-only rule; I did not attempt the live second-account delete described by the lab.
-- The session cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`, and has a one-day `Max-Age`. It adds `Secure` when the request is HTTPS or carries `x-forwarded-proto: https`. HttpOnly prevents page JavaScript from reading it; SameSite=Lax limits cross-site cookie sending; Secure restricts it to HTTPS; Path limits where the browser sends it.
-- The forwarded Codespace login page loaded over HTTPS without a browser security warning. There is no public production URL to check.
+The broad and sharper Git-history searches from the prior Exercise 4 session were reviewed; no real credential was found in the repository history. No `.env` is committed. A valid anonymous write returns HTTP 401 in the local HTTP tests. Automated tests cover refusing another account's registration deletion, but I did not attempt that deletion from a second account on the deployed site.
 
-How I checked: ran the broad and sharper Git-history searches; inspected the cookie construction in `src/services/auth.mjs`; confirmed the anonymous API status in local HTTP checks and the owner rule in passing tests; opened the forwarded login page in the browser.
+The session cookie uses `HttpOnly`, `SameSite=Lax`, `Path=/` and a one-day `Max-Age`; it adds `Secure` for HTTPS or `x-forwarded-proto: https`. HttpOnly prevents page JavaScript from reading the cookie, SameSite=Lax limits cross-site sends, Secure restricts it to HTTPS, and Path limits where it is sent. The live service URL uses HTTPS. Chrome displayed an organization policy notice blocking DevTools on the Render dashboard; I have no live DevTools Network capture.
+
+How I checked: reviewed the broad and sharp searches from the prior session, inspected `src/services/auth.mjs`, checked the repo for a committed `.env`, ran the anonymous-write tests, opened the live HTTPS site and observed the DevTools policy notice. I did not run a live second-account deletion.
 
 ## 7. Known gaps, ranked by risk
 
-1. **No public deployment or live production check.** Render has no service yet, so public HTTPS, live `/health`, Render environment values and production startup are unverified. Next: complete Render account verification, set the deployment environment, deploy and run the course self-check against the actual URL.  
-   How I checked: the Render dashboard still shows the new-service configuration and no deployed service; there is no live URL in `course.json`.
+1. **Google sign-in is not implemented.** The live app supports the local seeded account, so the provider sign-in step is incomplete. Next: implement Google OAuth with state and PKCE, configure a provider client and test the live callback.
+   How I checked: reviewed the auth routes and `SPEC.md`; there is no provider button or callback route.
 
-2. **Google sign-in is not implemented.** The project specification defers OAuth; no provider button, redirect flow or live callback is available. Next: implement the state/PKCE flow and configure an OAuth client before claiming provider sign-in works.  
-   How I checked: checked `SPEC.md` and the auth routes; `.env.example` contains unused placeholders only.
+2. **Live authorization and malformed-input checks are incomplete.** I did not send malformed JSON or a valid anonymous write to the deployed API, and no second account tried to delete the first account's reservation. Next: use two test accounts and record each live HTTP status and the unchanged row.
+   How I checked: the automated/local tests cover these cases, but no live request or second-account attempt was made.
 
-3. **Some UI checks remain incomplete.** Screenshots now cover the four event-list states, reservation success and model thinking/fallback. Loading onset was not measured against 100 ms; widths 380/768/1280, contrast and touch-target sizes remain unchecked. Next: measure those and keep unsupported checklist items unticked.
-   How I checked: installed Playwright transiently in Codespaces with no manifest/lockfile change, ran the browser test successfully (1/1), and verified seven PNGs under docs/ui/. Only local fixture states and recorded viewport sizes were checked; remaining measurements are listed in docs/UI.md.
+3. **The live request waterfall and full live error/empty states are unmeasured.** The local browser fixtures cover empty and offline-error states; the live DevTools request count, dependencies and Finish time are missing, and the live loading onset was not timed against 100 ms. Next: capture the events page in DevTools with cache disabled and Slow 4G, then capture Offline retry and time the loader.
+   How I checked: the repository has local state screenshots but no live Network capture or timings.
 
-4. **Persistence across a production redeploy and rollback are unverified.** A reservation is present in Neon, but it has not been created on a live Render site, survived a Render redeploy, or been restored by rollback. Next: record a recognizable live row, redeploy, reload and time a real rollback.  
-   How I checked: Neon showed the locally created row; no Render service or deploy event exists.
+4. **Responsive and accessibility measurements are incomplete.** A single spacing/type scale was not audited; widths 380/768/1280, layout shift, full keyboard flow, contrast, all labels with a screen reader and 44-pixel touch targets were not checked.
+   How I checked: these remain unticked in `docs/UI.md`, each with its measurement status.
 
-5. **No live cross-account authorization attempt or real model-provider outage test.** Automated tests exercise owner rules and fake-provider fallbacks, but no second signed-in account or provider request was used in the browser. Next: run those checks with test accounts after deployment; do not send real account data to the model.  
-   How I checked: the 20 local tests passed; the real Gemini provider was not called, and the live delete attempt was not performed.
+5. **The real model provider and successful suggestion label were not tested.** Tests use fake clients; the live model key is not configured. Next: configure a test key, make one test request and label the suggestion clearly before comparing it with event facts.
+   How I checked: inspected `src/services/poster.mjs`; no real provider request or successful suggestion was made.
 
 ## 8. Model feature
 
-The optional poster feature sends the uploaded event-poster image, its MIME type and a short extraction prompt to Google Gemini when a key is configured. It does not include member account data. The feature returns a draft for organizer review and does not save the event automatically. With the key missing, the app falls back to manual entry. No real provider request was made in this run.
+The optional poster feature sends the selected poster image, its MIME type and a short extraction prompt to Google Gemini when `GEMINI_API_KEY` is configured. It does not send member account data. With no key, the app reports that suggestions are unavailable and leaves manual entry available. No real provider request was made.
 
-As checked on 27 November 2026, the provider's standard paid list rates were $0.30 per million input tokens and $2.50 per million output tokens (including thinking tokens). One call costs `(input_tokens × $0.30 + output_tokens × $2.50) / 1,000,000`; the exact request cost cannot be stated without measured image, prompt and response token counts. This is a rate-based calculation, not a measured charge.
+For Gemini 2.5 Flash, Google's paid standard rates checked on 27 November 2026 are $0.30 per million input text/image/video tokens and $2.50 per million output tokens, including thinking tokens. The rate-based formula for one request is `(input_tokens × $0.30 + output_tokens × $2.50) / 1,000,000`; actual token usage and request cost were not measured. Source: [Google Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
 
-How I checked: ran `npm test` with injected fake clients and checked Google's published Gemini API pricing. No image, key or account data was sent to the provider.
+How I checked: inspected `src/services/poster.mjs`, ran tests with fake clients, confirmed the missing-key fallback, and checked Google's published pricing. No user image or account data was sent to the provider.
 
 ## 9. MCP
 
-The project tools are `upcoming_events`, `my_registrations` and `register_for_event`; the server also retains `find_lecture` and `search_lectures`. The project tools use the session represented by `CLUB_SESSION_TOKEN`, then apply the same account ownership rules as the HTTP services. A token therefore acts as that signed-in account for the allowed project tools. The MCP server is a local stdio process and is not publicly deployed.
+The project tools are `upcoming_events`, `my_registrations` and `register_for_event`; the server also retains `find_lecture` and `search_lectures`. Project tools require a valid Club Events session passed as `CLUB_SESSION_TOKEN`, then use the shared account ownership rules. The token acts as that signed-in account for the allowed operations. MCP is a local stdio process and is not publicly deployed.
 
-How I checked: the 20-test suite includes MCP protocol and service checks; I inspected the server entry point and confirmed the Codespace command is local stdio. No public MCP endpoint exists.
+How I checked: inspected `mcp-server/server.js` and `package.json`, and ran the MCP and service tests. No public MCP endpoint is configured.

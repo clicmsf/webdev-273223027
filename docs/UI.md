@@ -23,13 +23,13 @@ the text is readable, and nothing jumps around while it loads.
 A screen that only handles "it worked" is a screen that lies to the user on the day it matters.
 
 - [ ] **Loading.** Something tells the user the app is working, within about 100 ms.
-  - how I checked: A test-only gated events request showed the visible Loading events... state, captured in [events-loading.png](ui/events-loading.png). The loader timing was not measured, so the 100 ms criterion remains unverified.
+  - how I checked: A test-only gated events request showed the visible Loading events... state, captured in [events-loading.png](ui/events-loading.png). On the live page I also saw Loading events... before the list arrived. I did not measure the loader timing, so the 100 ms criterion remains unverified.
 - [x] **Empty.** The screen says what this list is for and what to do next, instead of showing nothing.
   - how I checked: Removed all events from the isolated browser-test database, refreshed, and verified the empty guidance text in [events-empty.png](ui/events-empty.png).
 - [x] **Error.** A sentence a person can read. Never a raw JSON body, never a stack trace, never just "Error".
   - how I checked: Simulated an offline events request, verified the readable message and retry button, then retried successfully; [events-error.png](ui/events-error.png) records the error state.
 - [x] **Success.** The user can see that what they did took effect, without reloading the page to find out.
-  - how I checked: In the isolated browser test, reserved a place, verified the inline success message and the database row changed from 0 to 1, then captured [events-success.png](ui/events-success.png).
+  - how I checked: In the isolated browser test, reserved a place, verified the inline success message and the database row changed from 0 to 1, then captured [events-success.png](ui/events-success.png). On the live Render site I reserved Project Showcase and saw the inline success message; after a deploy and rollback, the same reservation remained visible.
 
 ## Keyboard and accessibility
 

@@ -138,6 +138,18 @@ This is Codex's review, not a claim of student review or hand-written student te
 - UI four-state and model screenshots, network waterfall measurement, live second-account ownership attempt, Render redeploy persistence test and real rollback timing remain outstanding. No values or timings were guessed.
 - Usage figures for this Codex session are unavailable and recorded as such; no token or cost estimate was invented.
 
-## 2026-11-27  Browser evidence follow-up
+## 2026-11-27 — Browser evidence follow-up
 - Correction to the earlier note: installed Playwright transiently in Codespaces (no manifest/lockfile change); the browser evidence test passed 1/1 and generated seven PNG screenshots in docs/ui/ for event content, loading, empty, offline error, reservation success, model thinking and unavailable-provider fallback.
 - These use isolated local fixtures and a held poster request, not a live Render or model-provider test. Loading onset, widths 380/768/1280, contrast and touch targets remain unmeasured and are left incomplete in docs/UI.md.
+
+## 2026-11-27 — Exercise 4 final verification and report correction
+
+- Goal: finish the Render/Neon deployment checks, verify the CI gate, complete the reversible visible-change rollback, and replace stale readiness claims with observed evidence.
+- False deployment claim corrected: the earlier Exercise 4 note said no Render service existed and no public URL was verified. Render showed the service Live at `https://webdev-273223027.onrender.com`; the live health endpoint returned `{"status":"ok","db":"ok"}`. That earlier claim was false and the report now records the live URL and checks.
+- Second mistaken inference corrected: I initially read Render's Node SQLite warning as evidence the production app used SQLite. The deployed server imports `openPostgres()`; the shared test adapter causes the warning. Neon showed the connected registrations table, and the live app showed the added reservation after deploy and rollback. The SQLite inference was false.
+- Set Render Auto-Deploy to `After CI Checks Pass`. Changed one health assertion to an intentionally wrong expected status; GitHub Actions failed commit `d89496c`. Render Events had no deploy for that SHA while the prior successful commit remained live. Restored the assertion; commit `dc3b90e` was green and deployed. A second green commit `dc25d21` deployed a visible events-heading change.
+- Created a live Project Showcase reservation before redeploy. It remained visible after the new deployment and after rollback. Rolled back from `dc25d21` to `dc3b90e`; the original heading returned. Render's event timestamps show 15 seconds between rollback start and service live. Render disabled Auto-Deploy during rollback; restored `After CI Checks Pass` and confirmed it selected.
+- Live checks after rollback: `/health` returned `{"status":"ok","db":"ok"}`; `/no-such-page` returned `{"error":"Not found"}`; the live events screen showed all three reservations. Local test suite passed 20/20; coverage passed with 100% service lines/functions/branches and 82.73% overall source lines. Empty `DATABASE_URL` stopped startup with `missing DATABASE_URL: see .env.example`.
+- Updated `.env.example` to remove unread OAuth placeholders. Added the live URL, environment table, checks and ranked gaps to `READINESS.md`; updated the UI success evidence and added this continuation to `USAGE.md`.
+- DevTools displayed an organization policy notice on the Render dashboard, so no Network waterfall numbers were collected. Live malformed-JSON/anonymous POST tests and second-account deletion remain unverified. Google OAuth and a real Gemini call remain unimplemented/unconfigured; these are listed as gaps rather than claimed complete.
+- Usage statistics are unavailable; no token counts or price estimate for this assistant session were fabricated.

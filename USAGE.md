@@ -11,3 +11,5 @@
 | 2026-11-27 | Codex Exercise 4 deployment and readiness session | Unavailable | Unavailable | N/A | Unavailable |
 
 CLI and Codex session billing statistics are unavailable here. These fields are not estimates or CLI results; no usage or cost was fabricated.
+
+| 2026-11-27 | Codex continuation: CI gate, live persistence and Exercise 4 report | Unavailable | Unavailable | N/A | Unavailable |
