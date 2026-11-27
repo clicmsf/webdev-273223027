@@ -6,7 +6,7 @@ Live URL: https://webdev-273223027.onrender.com
 
 The Render service is live over HTTPS. `GET /health` returned `{"status":"ok","db":"ok"}`, and the live events page showed three upcoming events. I reserved Project Showcase before the next deploy. After a redeploy and rollback, the same reservation was still visible in the events page.
 
-How I checked: opened Render and confirmed the live service, opened the health URL, reserved Project Showcase on the live events page, then reloaded that page after a deploy and after rollback. Neon Tables also showed registration rows in the connected database.
+How I checked: opened Render and confirmed the live service, opened the health URL, reserved Project Showcase on the live events page, then reloaded that page after a deploy and after rollback. Neon Tables also showed registration rows in the connected database. The final green CI commit was auto-deployed and `/health` still returned `{"status":"ok","db":"ok"}`.
 
 ## 2. Environment variables
 
@@ -17,9 +17,11 @@ How I checked: opened Render and confirmed the live service, opened the health U
 | `DB_PATH` | Optional SQLite file for standalone MCP when no database URL is set | Local path; default is `.local/club.db` | No | Not used by the production HTTP server |
 | `SEED_PASSWORD` | Password for the one-time demo-account setup command | Chosen for `npm run setup` | Yes | Setup-only; not required by the running service |
 | `GEMINI_API_KEY` | Optional key for poster suggestions | Google AI Studio | Yes | Not configured; the manual-entry fallback remains available |
+| `GOOGLE_CLIENT_ID` | Planned Google OAuth client identifier | Google Cloud Console OAuth client | No | Blank placeholder; current code does not read it |
+| `GOOGLE_CLIENT_SECRET` | Planned Google OAuth client secret | Google Cloud Console OAuth client | Yes | Blank placeholder; current code does not read it |
 | `CLUB_SESSION_TOKEN` | Authenticated identity for local stdio MCP project tools | A valid Club Events session | Yes | Local MCP only; no hosted MCP service |
 
-How I checked: searched the application, scripts and MCP code for `process.env` reads, compared the results with `.env.example`, and ran `DATABASE_URL= npm start`. Startup exited with `missing DATABASE_URL: see .env.example`. OAuth placeholders were removed from `.env.example` because the app does not read them.
+How I checked: searched the application, scripts and MCP code for `process.env` reads, compared the runtime variables with `.env.example`, and ran `DATABASE_URL= npm start`. Startup exited with `missing DATABASE_URL: see .env.example`. The Google OAuth placeholders remain blank because the inherited spec names Google and the Exercise 2 structural check requires these names; the current app does not read them, and this does not mean OAuth is configured.
 
 ## 3. What happens when things fail
 
@@ -52,7 +54,7 @@ How I checked: reviewed the broad and sharp searches from the prior session, ins
 ## 7. Known gaps, ranked by risk
 
 1. **Google sign-in is not implemented.** The live app supports the local seeded account, so the provider sign-in step is incomplete. Next: implement Google OAuth with state and PKCE, configure a provider client and test the live callback.
-   How I checked: reviewed the auth routes and `SPEC.md`; there is no provider button or callback route.
+   How I checked: reviewed the auth routes and `SPEC.md`; there is no provider button or callback route. The Google Cloud Console credentials page returned `Site Unavailable` and `Unable to access this site` after one reload, so no OAuth client was created or configured.
 
 2. **Live authorization and malformed-input checks are incomplete.** I did not send malformed JSON or a valid anonymous write to the deployed API, and no second account tried to delete the first account's reservation. Next: use two test accounts and record each live HTTP status and the unchanged row.
    How I checked: the automated/local tests cover these cases, but no live request or second-account attempt was made.

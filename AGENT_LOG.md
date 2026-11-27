@@ -153,3 +153,11 @@ This is Codex's review, not a claim of student review or hand-written student te
 - Updated `.env.example` to remove unread OAuth placeholders. Added the live URL, environment table, checks and ranked gaps to `READINESS.md`; updated the UI success evidence and added this continuation to `USAGE.md`.
 - DevTools displayed an organization policy notice on the Render dashboard, so no Network waterfall numbers were collected. Live malformed-JSON/anonymous POST tests and second-account deletion remain unverified. Google OAuth and a real Gemini call remain unimplemented/unconfigured; these are listed as gaps rather than claimed complete.
 - Usage statistics are unavailable; no token counts or price estimate for this assistant session were fabricated.
+
+
+## 2026-11-27 — CI repair and final deployment confirmation
+- The latest spec job failed because `checks/ex2.mjs` requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` when `SPEC.md` names Google. Restored only blank placeholders in `.env.example`, with a comment that current code does not read them; no real provider credentials were added.
+- Commit `b5ba61a` passed the test, Docker image build, coverage, MCP and spec jobs. Render's Auto-Deploy setting was `After CI Checks Pass`; Render Events showed that commit's deployment succeeded. Reloaded the live `/health` endpoint after deployment; it returned `{"status":"ok","db":"ok"}`.
+- Rechecked the course's Google OAuth step. The Google Cloud Console credentials page still displayed `Site Unavailable` / `Unable to access this site` after a reload. No OAuth client was created, no credentials were configured, and provider sign-in remains incomplete.
+- Reviewed the remaining report claims against the recorded live checks. Waterfall timings, live malformed/anonymous requests, second-account deletion, full live empty/error states, and a successful real Gemini call remain unverified and are listed as gaps.
+- Usage statistics for this continuation are unavailable; no token or cost values were invented.
