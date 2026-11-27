@@ -43,6 +43,14 @@ Club events.
 Plain HTML, CSS and client-side JavaScript. Planned screens: local/Google sign-in, upcoming event list, event detail and registration screen, organizer event management. Each screen needs loading, empty, error and success states. Slice 2 adds reservation/cancellation and an organizer-only poster draft panel. See `docs/UI.md` for the future checklist.
 
 ## Architecture
+| Screen | Rendering | Why | What appears while data is on its way |
+| --- | --- | --- | --- |
+| Sign-in (`public/login.html`) | Server-served static HTML; the form submits with browser JavaScript | Authentication happens before the member-only list; no event data is needed to paint this screen | The form appears immediately; the status paragraph is the place for a sign-in result |
+| Events and reservations (`public/events.html`) | Browser-rendered list and state from `/api/events`, `/api/registrations`, and `/api/me` | The screen depends on the current member's registrations and must update after reserve/cancel without a full page load | `Loading events...` and `aria-busy=true`; failures show a readable alert and retry action |
+| Poster draft panel (inside the events screen) | Browser-rendered fields and asynchronous suggestion response | The organizer reviews a proposed draft before saving; a model response must never create an event automatically | `Reading poster...`, followed by a suggestion or manual-entry fallback |
+
+Organizer event management and Google sign-in screens are not implemented; they remain deferred criteria. The architecture table records the current implementation, not those future screens.
+
 - Server: `src/routes/http.mjs` authenticates a request and maps service results/errors to HTTP. `src/services/registrations.mjs` owns capacity, duplicate and ownership rules; `src/data/db.mjs` owns SQL and transactions.
 - Browser: `public/events.html` hosts the view; `public/events-client.mjs` owns screen state, REST requests and rendering. MCP calls the same services with a validated session identity.
 - The complete agent-written request trace, deliberate layering mismatch and student-review requirements are in `docs/feature-3.md`. This is a review draft, not a claim of student authorship.
