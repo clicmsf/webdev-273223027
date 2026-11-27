@@ -16,7 +16,7 @@ test('health probes the database and returns 503 when the query fails', async (t
   db.close();
 
   const unhealthy = await fetch(url);
-  assert.equal(unhealthy.status, 502);
+  assert.equal(unhealthy.status, 503);
   assert.deepEqual(await unhealthy.json(), { status: 'error', db: 'down' });
 });
 
