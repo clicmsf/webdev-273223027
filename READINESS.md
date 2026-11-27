@@ -21,15 +21,15 @@ How I checked: opened Render and confirmed the live service, opened the health U
 | `GOOGLE_CLIENT_SECRET` | Planned Google OAuth client secret | Google Cloud Console OAuth client | Yes | Blank placeholder; current code does not read it |
 | `CLUB_SESSION_TOKEN` | Authenticated identity for local stdio MCP project tools | A valid Club Events session | Yes | Local MCP only; no hosted MCP service |
 
-How I checked: searched the application, scripts and MCP code for `process.env` reads, compared the runtime variables with `.env.example`, and ran `DATABASE_URL= npm start`. Startup exited with `missing DATABASE_URL: see .env.example`. The Google OAuth placeholders remain blank because the inherited spec names Google and the Exercise 2 structural check requires these names; the current app does not read them, and this does not mean OAuth is configured.
+How I checked: searched the application, scripts and MCP code for `process.env` reads, compared the runtime variables with `.env.example`, and ran `DATABASE_URL= npm start`. Startup exited with `missing DATABASE_URL: see .env.example`. The Google OAuth placeholders remain blank because the inherited spec names Google and the Exercise 2 structural check requires these names; the current app does not read them, and this does not mean OAuth is configured. Render currently lists `DATABASE_URL` and `PUBLIC_BASE_URL`; the latter is present for the planned OAuth redirect setup and is not read by the current app. I did not copy any environment values into the report.
 
 ## 3. What happens when things fail
 
 With Neon reachable, the live health endpoint returned HTTP 200 and `{"status":"ok","db":"ok"}`. The live missing route returned `{"error":"Not found"}`. Local HTTP tests showed that a failed database query returns HTTP 503 with `{"status":"error","db":"down"}`, malformed JSON to `POST /api/registrations` returns HTTP 400 with one short sentence, and a valid anonymous write returns HTTP 401. The server logs the internal error details.
 
-I tested the CI gate with a deliberately incorrect health-test expectation. GitHub Actions failed that commit, and Render Events showed no deployment for it. After restoring the test, the next green commit deployed. I then deployed a visible heading change and rolled back to the prior deploy. Render's event times show rollback started at 7:11:35 PM and the service was live at 7:11:50 PM on 27 November 2026: 15 seconds by the Render timeline. The rollback restored the original heading. Render disabled auto-deploy during rollback; I set it back to `After CI Checks Pass` and confirmed that option was selected. I did not send malformed JSON or an anonymous write to the live endpoint.
+I tested the CI gate with a deliberately incorrect health-test expectation. GitHub Actions failed that commit, and Render Events showed no deployment for it. After restoring the test, the next green commit deployed. I then deployed a visible heading change and rolled back to the prior deploy. Render's event times show rollback started at 7:11:35 PM and the service was live at 7:11:50 PM on 27 November 2026: 15 seconds by the Render timeline. The rollback restored the original heading. Render disabled auto-deploy during rollback; I set it back to `After CI Checks Pass` and confirmed that option was selected. The later green commit `2cf5af1` passed all four CI jobs and was deployed by Render. From the Codespace, malformed JSON sent to live `POST /api/registrations` returned HTTP 400 with `{"error":"Send a valid JSON request body."}`; a valid anonymous body (`{"eventId":1}`) returned HTTP 401. Both requests had no session cookie, and the anonymous route guard ran before the reservation service.
 
-How I checked: ran `npm test` (20/20), `npm run coverage`, and the missing-variable startup command; opened the live missing route and health endpoint; checked the failed and restored Actions runs, the Render Events page and the post-rollback service setting.
+How I checked: ran `npm test` (20/20), `npm run coverage`, and the missing-variable startup command; opened the live missing route and health endpoint; sent both write-route requests from the Codespace and observed 400/401; checked the failed and restored Actions runs, the Render Events page and the post-rollback service setting.
 
 ## 4. Four states of one screen
 
@@ -45,19 +45,19 @@ How I checked: no Network-panel capture or timing note was saved for the live ev
 
 ## 6. Security basics checked
 
-The broad and sharper Git-history searches from the prior Exercise 4 session were reviewed; no real credential was found in the repository history. No `.env` is committed. A valid anonymous write returns HTTP 401 in the local HTTP tests. Automated tests cover refusing another account's registration deletion, but I did not attempt that deletion from a second account on the deployed site.
+The broad and sharper Git-history searches from the prior Exercise 4 session were reviewed; no real credential was found in the repository history. No `.env` is committed. A valid anonymous write returned HTTP 401 on the live site; malformed JSON returned HTTP 400. Automated tests cover refusing another account's registration deletion, but I did not attempt that deletion from a second account on the deployed site.
 
 The session cookie uses `HttpOnly`, `SameSite=Lax`, `Path=/` and a one-day `Max-Age`; it adds `Secure` for HTTPS or `x-forwarded-proto: https`. HttpOnly prevents page JavaScript from reading the cookie, SameSite=Lax limits cross-site sends, Secure restricts it to HTTPS, and Path limits where it is sent. The live service URL uses HTTPS. Chrome displayed an organization policy notice blocking DevTools on the Render dashboard; I have no live DevTools Network capture.
 
-How I checked: reviewed the broad and sharp searches from the prior session, inspected `src/services/auth.mjs`, checked the repo for a committed `.env`, ran the anonymous-write tests, opened the live HTTPS site and observed the DevTools policy notice. I did not run a live second-account deletion.
+How I checked: reviewed the broad and sharp searches from the prior session, inspected `src/services/auth.mjs`, checked the repo for a committed `.env`, ran the local authorization tests, sent live malformed and anonymous POST requests from the Codespace, opened the live HTTPS site and observed the DevTools policy notice. I did not run a live second-account deletion.
 
 ## 7. Known gaps, ranked by risk
 
 1. **Google sign-in is not implemented.** The live app supports the local seeded account, so the provider sign-in step is incomplete. Next: implement Google OAuth with state and PKCE, configure a provider client and test the live callback.
    How I checked: reviewed the auth routes and `SPEC.md`; there is no provider button or callback route. The Google Cloud Console credentials page returned `Site Unavailable` and `Unable to access this site` after one reload, so no OAuth client was created or configured.
 
-2. **Live authorization and malformed-input checks are incomplete.** I did not send malformed JSON or a valid anonymous write to the deployed API, and no second account tried to delete the first account's reservation. Next: use two test accounts and record each live HTTP status and the unchanged row.
-   How I checked: the automated/local tests cover these cases, but no live request or second-account attempt was made.
+2. **The live second-account ownership check is incomplete.** Live malformed JSON returned HTTP 400 and a valid anonymous reservation request returned HTTP 401, but no second account tried to delete the first account's reservation. Next: use two test accounts and record the live denial and unchanged row.
+   How I checked: ran both live POST checks from the Codespace; the second-account attempt remains unperformed.
 
 3. **The live request waterfall and full live error/empty states are unmeasured.** The local browser fixtures cover empty and offline-error states; the live DevTools request count, dependencies and Finish time are missing, and the live loading onset was not timed against 100 ms. Next: capture the events page in DevTools with cache disabled and Slow 4G, then capture Offline retry and time the loader.
    How I checked: the repository has local state screenshots but no live Network capture or timings.
